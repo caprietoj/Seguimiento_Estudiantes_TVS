@@ -1,0 +1,102 @@
+# Entorno de PRODUCCIÓN. Usa la imagen publicada en Docker Hub (construida por el
+# Dockerfile de este repositorio y subida por el pipeline de CI al crear un tag v*.*.*).
+#
+# Despliegue (ver también el README, sección "Despliegue"):
+#   1. docker login                         (si el repositorio de Docker Hub es privado)
+#   2. cp .env.example .env  y llenar las variables, generar APP_KEY
+#   3. docker compose -f docker-compose.prod.yml up -d
+#   4. docker compose -f docker-compose.prod.yml exec app php artisan app:crear-admin correo@dominio
+
+services:
+  app:
+    image: ${DOCKERHUB_REPO:-organizacion/seguimiento-estudiantes}:${APP_VERSION:-latest}
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    env_file:
+      - .env
+    volumes:
+      - storage_data:/var/www/html/storage/app
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    networks:
+      - internal
+      - public
+
+  queue:
+    image: ${DOCKERHUB_REPO:-organizacion/seguimiento-estudiantes}:${APP_VERSION:-latest}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      AUTORUN_ENABLED: "false"
+    volumes:
+      - storage_data:/var/www/html/storage/app
+    command: ["php", "/var/www/html/artisan", "queue:work", "--tries=3"]
+    stop_signal: SIGTERM
+    healthcheck:
+      test: ["CMD", "healthcheck-queue"]
+      start_period: 10s
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - internal
+
+  scheduler:
+    image: ${DOCKERHUB_REPO:-organizacion/seguimiento-estudiantes}:${APP_VERSION:-latest}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      AUTORUN_ENABLED: "false"
+    volumes:
+      - storage_data:/var/www/html/storage/app
+    command: ["php", "/var/www/html/artisan", "schedule:work"]
+    stop_signal: SIGTERM
+    healthcheck:
+      test: ["CMD", "healthcheck-schedule"]
+      start_period: 10s
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - internal
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-seguimiento_estudiantes}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Sin "ports": MySQL solo es alcanzable desde los demás servicios de este archivo,
+    # nunca desde fuera del servidor (sección 9: "Red interna").
+    networks:
+      - internal
+
+volumes:
+  db_data:
+  storage_data:
+
+networks:
+  internal:
+    internal: true
+  public:

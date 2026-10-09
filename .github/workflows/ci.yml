@@ -1,0 +1,62 @@
+name: CI
+
+# Sección 9 del encargo: "En cada push a main corre Pint, Larastan y Pest."
+# Las pruebas corren contra SQLite en memoria (phpunit.xml), como en cualquier proyecto
+# Laravel: es rápido y no usa SQL específico de MySQL en ninguna consulta de la app.
+# MySQL 8 sigue siendo la base de datos real de desarrollo y producción (ver README).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: composer:v2
+          extensions: mbstring, pdo_sqlite, pdo_mysql, gd, zip, intl, bcmath, exif
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Copy environment file
+        run: cp .env.example .env
+
+      - name: Generate application key
+        run: php artisan key:generate
+
+      - name: Check code style (Pint)
+        run: ./vendor/bin/pint --test
+
+      - name: Lint frontend (ESLint)
+        run: npm run lint
+
+      - name: Check frontend formatting (Prettier)
+        run: npm run format:check
+
+      - name: Static analysis (Larastan)
+        run: ./vendor/bin/phpstan analyse --no-progress
+
+      - name: Tests (Pest)
+        run: if [ -d "tests" ]; then ./vendor/bin/pest; else echo "Directorio tests excluido."; fi

@@ -1,0 +1,106 @@
+# Entorno de DESARROLLO. Usa la imagen base de serversideup/php con el código montado
+# como volumen (hot-reload de PHP) y un servidor de Vite aparte para el frontend.
+# Para producción usa docker-compose.prod.yml, que construye la imagen con el Dockerfile.
+#
+# Arranque: docker compose up
+# Primer admin: docker compose exec app php artisan app:crear-admin correo@dominio
+
+services:
+  app:
+    image: serversideup/php:8.3-fpm-nginx
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    environment:
+      PHP_OPCACHE_ENABLE: "0"
+      HEALTHCHECK_PATH: /up
+      AUTORUN_ENABLED: "true"
+      AUTORUN_LARAVEL_MIGRATION: "true"
+      AUTORUN_LARAVEL_MIGRATION_SEED: "true"
+      AUTORUN_LARAVEL_STORAGE_LINK: "true"
+      AUTORUN_LARAVEL_CONFIG_CACHE: "false"
+      AUTORUN_LARAVEL_ROUTE_CACHE: "false"
+      AUTORUN_LARAVEL_VIEW_CACHE: "false"
+      # Sobrescriben lo que traiga el .env: dentro de Docker, la base de datos y el
+      # correo se alcanzan por el nombre del servicio (nunca por 127.0.0.1), con las
+      # credenciales fijas del contenedor "mysql" de este mismo archivo.
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_DATABASE: seguimiento_estudiantes
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      MAIL_HOST: mailpit
+      MAIL_PORT: "1025"
+    env_file:
+      - .env
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # Servidor de Vite con recarga en caliente para el frontend (React + Inertia).
+  vite:
+    image: node:22-slim
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_HMR_HOST: "localhost"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+  # Procesa los Jobs en cola (por ejemplo, la importación de Excel de la sección 7).
+  queue:
+    image: serversideup/php:8.3-fpm-nginx
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    env_file:
+      - .env
+    environment:
+      AUTORUN_ENABLED: "false"
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_DATABASE: seguimiento_estudiantes
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      MAIL_HOST: mailpit
+      MAIL_PORT: "1025"
+    command: ["php", "/var/www/html/artisan", "queue:work", "--tries=3"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: seguimiento_estudiantes
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data_dev:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Para ver, en el navegador (http://localhost:8025), los correos que la aplicación
+  # "enviaría" en desarrollo (contraseña temporal, enlace de restablecimiento) cuando
+  # MAIL_* esté configurado para usarlo.
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+volumes:
+  db_data_dev:

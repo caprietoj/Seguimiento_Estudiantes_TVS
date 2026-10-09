@@ -1,0 +1,15 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app
+        - database
+        - config
+        - routes
+
+    level: 6
+
+    excludePaths:
+        - app/Http/Controllers/Auth/*
+        - app/Http/Controllers/Settings/*
