@@ -40,19 +40,25 @@ class HandleInertiaRequests extends Middleware
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
         $user = $request->user();
-        $roleLabels = $user
-            ? $user->getRoleNames()->map(fn (string $role) => RoleName::labelFor($role))->values()
-            : [];
 
-        return array_merge(parent::share($request), [
+        return [
             ...parent::share($request),
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $user,
-                'roleLabels' => $roleLabels,
+                // Solo los campos que usa el frontend: evita serializar el modelo User
+                // completo (roles, sección EMC, etc.) en cada respuesta de Inertia.
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'email_verified_at' => $user->email_verified_at,
+                ] : null,
+                'roleLabels' => $user
+                    ? $user->getRoleNames()->map(fn (string $role) => RoleName::labelFor($role))->values()
+                    : [],
                 'isAdmin' => $user?->hasRole(RoleName::Admin->value) ?? false,
             ],
-        ]);
+        ];
     }
 }
