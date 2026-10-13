@@ -49,6 +49,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Respaldos
+    |--------------------------------------------------------------------------
+    |
+    | Carpeta de los respaldos (.zip) de Administración · Respaldos y del respaldo
+    | automático nocturno. En producción vive en el volumen de storage/app.
+    |
+    */
+    'respaldos' => [
+        'directorio' => env('RESPALDOS_DIRECTORIO', storage_path('app/backups')),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Seguimientos por periodo
     |--------------------------------------------------------------------------
     |

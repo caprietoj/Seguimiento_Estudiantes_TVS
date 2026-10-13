@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\BackupController as AdminBackupController;
 use App\Http\Controllers\Admin\FollowUpController as AdminFollowUpController;
 use App\Http\Controllers\Admin\GradeLevelController as AdminGradeLevelController;
 use App\Http\Controllers\Admin\GroupController as AdminGroupController;
@@ -112,6 +113,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('asignaciones', [AdminTeachingAssignmentController::class, 'store'])->name('asignaciones.store');
         Route::delete('asignaciones/{assignment}', [AdminTeachingAssignmentController::class, 'destroy'])->name('asignaciones.destroy');
         Route::put('asignaciones/grupo/{group}/director', [AdminTeachingAssignmentController::class, 'director'])->name('asignaciones.director');
+
+        Route::get('respaldos', [AdminBackupController::class, 'index'])->name('respaldos.index');
+        Route::post('respaldos', [AdminBackupController::class, 'store'])->name('respaldos.store');
+        Route::post('respaldos/subir', [AdminBackupController::class, 'upload'])->name('respaldos.subir');
+        Route::get('respaldos/{name}/descargar', [AdminBackupController::class, 'download'])->name('respaldos.descargar');
+        Route::post('respaldos/{name}/restaurar', [AdminBackupController::class, 'restore'])->name('respaldos.restaurar');
+        Route::delete('respaldos/{name}', [AdminBackupController::class, 'destroy'])->name('respaldos.destroy');
 
         Route::get('importar', [AdminImportController::class, 'index'])->name('importar.index');
         Route::post('importar', [AdminImportController::class, 'store'])->name('importar.store');

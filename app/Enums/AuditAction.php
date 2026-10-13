@@ -11,6 +11,8 @@ enum AuditAction: string
     case Login = 'login';
     case Import = 'import';
     case Revert = 'revert';
+    case Backup = 'backup';
+    case Restore = 'restore';
 
     public function label(): string
     {
@@ -22,6 +24,8 @@ enum AuditAction: string
             self::Login => 'Inicio de sesión',
             self::Import => 'Importación',
             self::Revert => 'Reversión',
+            self::Backup => 'Respaldo',
+            self::Restore => 'Restauración',
         };
     }
 }

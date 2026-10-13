@@ -10,6 +10,7 @@ const items = [
     { label: 'Asignaturas', href: '/admin/asignaturas' },
     { label: 'Asignaciones', href: '/admin/asignaciones' },
     { label: 'Importar', href: '/admin/importar' },
+    { label: 'Respaldos', href: '/admin/respaldos' },
 ];
 
 export function AdminNav() {

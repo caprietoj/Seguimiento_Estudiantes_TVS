@@ -218,6 +218,16 @@ Existe (todo bajo `/admin`, protegido por `Gate::define('admin', ...)` en
   tiene asignación o es director(a). Sin grupo, la reunión y la ficha muestran
   `reunion/sin-grupos` (no un 404).
 - **Importar** (`/admin/importar`) — ver Fase 5.
+- **Respaldos** (`/admin/respaldos`, `Admin\BackupController` + `App\Support\Backup\BackupService`):
+  crear, descargar, subir, restaurar y eliminar. El respaldo es un .zip propio (manifiesto +
+  una línea JSON por fila de cada tabla de `BackupService::TABLES` + fotos), hecho en PHP (no
+  depende de mysqldump). **Solo las tablas del seguimiento**: usuarios, roles, permisos y
+  sesiones se comparten con la intranet y nunca se respaldan ni se pisan. La restauración
+  exige escribir RESTAURAR, hace antes un respaldo «previo a restauración», reemplaza todo en
+  una sola transacción (llaves foráneas apagadas mientras tanto) y rechaza respaldos de una
+  versión más nueva (migraciones que esta instalación no tiene). `app:respaldar-base-datos`
+  (programado 02:00) genera el mismo .zip y borra los automáticos de más de 14 días; los
+  `.sql.gz` del formato anterior se listan solo para descargar.
 
 Lo que **falta** de esta fase (pedido explícitamente en el encargo, sección 6.5):
 
