@@ -38,9 +38,12 @@ class PhidiasStudentsImporter extends Importer
 
     /** Grado (valor del catálogo `grade_levels`) por la palabra con que Phidias nombra el curso. */
     private const GRADE_WORDS = [
-        'prejardin' => 0, 'prekinder' => 0, 'pre kinder' => 0, 'jardin' => 0, 'kinder' => 0, 'transicion' => 0, 'preescolar' => 0,
-        'primero' => 1, 'segundo' => 2, 'tercero' => 3, 'cuarto' => 4, 'quinto' => 5, 'sexto' => 6,
-        'septimo' => 7, 'octavo' => 8, 'noveno' => 9, 'decimo' => 10, 'undecimo' => 11, 'once' => 11, 'onceavo' => 11,
+        'prejardin' => 0, 'prekinder' => 0, 'pre kinder' => 0,
+        'jardin' => 1, 'kinder' => 1,
+        'transicion' => 2, 'preescolar' => 2,
+        'primero' => 3, 'segundo' => 4, 'tercero' => 5, 'cuarto' => 6, 'quinto' => 7,
+        'sexto' => 8, 'septimo' => 9, 'octavo' => 10, 'noveno' => 11, 'decimo' => 12,
+        'undecimo' => 13, 'once' => 13, 'onceavo' => 13,
     ];
 
     /** Partículas que van en minúscula dentro de un nombre propio. */
@@ -309,7 +312,8 @@ class PhidiasStudentsImporter extends Importer
         $status = NameMatcher::normalize($status);
 
         // Si Phidias no trae el estado, se asume activo (es un listado de matriculados).
-        return $status === '' || in_array($status, ['activo', 'activa', 'matriculado', 'matriculada'], true);
+        // "nuevo"/"nueva" son estudiantes nuevos del año (activos), no retirados.
+        return $status === '' || in_array($status, ['activo', 'activa', 'matriculado', 'matriculada', 'nuevo', 'nueva'], true);
     }
 
     public static function isAllowedPhotoUrl(string $url): bool
