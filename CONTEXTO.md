@@ -161,10 +161,12 @@ el navegador** (sin errores de consola, con datos reales):
 - **Ficha del estudiante** (`/estudiantes`, `/estudiantes/{student}`) —
   `app/Http/Controllers/StudentController.php` +
   `resources/js/pages/estudiantes/show.tsx`. Incluye exportar a PDF
-  (`/estudiantes/{student}/pdf`, usa `resources/views/pdf/ficha.blade.php`, tamaño carta con numeración
-  de páginas automática por canvas de DomPDF, membrete institucional TVS / Continuo IB, código institucional,
-  tarjetas KPI, desglose de compromisos colegio/familia, timeline de evaluaciones de estrategias, escala IB 1-7,
-  apoyos confidenciales y bloque de firmas) y foto de perfil (`app/Http/Controllers/PhotoController.php`,
+  (`/estudiantes/{student}/pdf`, plantilla `resources/views/pdf/ficha.blade.php`, tamaño carta,
+  tipografía Public Sans incrustada desde `resources/fonts/pdf/` (licencia OFL; DomPDF guarda su
+  caché en `storage/fonts`), foto grande del estudiante, indicadores, secciones numeradas que se
+  compactan cuando están vacías, firmas y aviso legal; solo incluye lo que el perfil de quien
+  exporta puede ver y lo dice al final. El archivo se descarga como
+  "Ficha de seguimiento - Nombre - Grupo - Año.pdf") y foto de perfil (`app/Http/Controllers/PhotoController.php`,
   recorte cuadrado con GD, servida por ruta autenticada — nunca pública).
 - **Compromisos** (`/compromisos`) — `app/Http/Controllers/CompromisosController.php`
   + `resources/js/pages/compromisos/index.tsx`.

@@ -23,10 +23,13 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 
 class StudentController extends Controller
 {
@@ -93,7 +96,7 @@ class StudentController extends Controller
         $data = $this->buildFicha($request, $student);
         abort_if($data === null, 404);
 
-        $data['generatedOn'] = now()->locale('es')->translatedFormat('d \d\e F \d\e Y, H:i');
+        $data['generatedOn'] = now()->format('d/m/Y · H:i');
         $data['exportedBy'] = $request->user()?->name;
 
         // DomPDF no puede (ni debe) fetchear la ruta autenticada de la foto: se incrusta en base64.
@@ -101,7 +104,12 @@ class StudentController extends Controller
             $data['photoBase64'] = 'data:image/jpeg;base64,'.base64_encode(Storage::disk('local')->get($student->photo_path));
         }
 
-        $pdf = Pdf::loadView('pdf.ficha', $data)->setPaper('letter', 'portrait');
+        // DomPDF guarda aquí las métricas de las fuentes incrustadas (Public Sans).
+        File::ensureDirectoryExists(storage_path('fonts'));
+
+        $pdf = Pdf::loadView('pdf.ficha', $data)
+            ->setPaper('letter', 'portrait')
+            ->setOption('enable_font_subsetting', true);
 
         /** @var Dompdf $domPdf */
         $domPdf = $pdf->getDomPDF();
@@ -109,16 +117,30 @@ class StudentController extends Controller
 
         $canvas = $domPdf->getCanvas();
         $fontMetrics = $domPdf->getFontMetrics();
-        /** @var string $font */
-        $font = $fontMetrics->getFont('DejaVu Sans', 'normal');
+        $font = $fontMetrics->getFont('Public Sans', 'normal') ?? $fontMetrics->getFont('DejaVu Sans', 'normal');
+        $color = [0.37, 0.39, 0.43];
 
-        $canvas->page_text(38, 756, 'The Victoria School · Ficha Integral de Seguimiento · Confidencial', $font, 7.5, [0.4, 0.45, 0.52]);
-        $canvas->page_text(500, 756, 'Página {PAGE_NUM} de {PAGE_COUNT}', $font, 7.5, [0.4, 0.45, 0.52]);
+        $canvas->line(40, 752, 572, 752, [0.83, 0.84, 0.87], 0.5);
+        $canvas->page_text(40, 758, Str::limit("The Victoria School · Ficha de seguimiento · {$student->full_name} · Confidencial", 110), $font, 7, $color);
+        $canvas->page_text(520, 758, 'Página {PAGE_NUM} de {PAGE_COUNT}', $font, 7, $color);
 
         return new HttpResponse((string) $domPdf->output(), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="ficha-'.$student->id.'.pdf"',
+            'Content-Disposition' => HeaderUtils::makeDisposition(
+                HeaderUtils::DISPOSITION_INLINE,
+                $this->pdfFileName($student, $data['group']['code'], $data['schoolYear']),
+                $this->pdfFileName($student, $data['group']['code'], $data['schoolYear'], ascii: true),
+            ),
         ]);
+    }
+
+    /** "Ficha de seguimiento - Natalia Anaya Ruiz - 6A - 2026-2027.pdf" (sin caracteres que los sistemas rechazan). */
+    private function pdfFileName(Student $student, string $groupCode, string $schoolYear, bool $ascii = false): string
+    {
+        $name = "Ficha de seguimiento - {$student->full_name} - {$groupCode} - ".str_replace('–', '-', $schoolYear);
+        $name = trim((string) preg_replace('/[\\\\\/:*?"<>|%]+/u', '', $name));
+
+        return ($ascii ? Str::ascii($name) : $name).'.pdf';
     }
 
     /** @return array<string, mixed>|null */

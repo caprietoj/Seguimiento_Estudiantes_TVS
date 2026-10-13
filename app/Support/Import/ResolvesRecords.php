@@ -66,7 +66,7 @@ trait ResolvesRecords
         }
 
         if ($grade === null && preg_match('/^(\d{1,2})/', $wanted, $m)) {
-            $grade = (int) $m[1];
+            $grade = self::gradeValueForSchoolYear((int) $m[1]);
         }
 
         if ($grade === null || ! GradeLevel::where('value', $grade)->exists()) {
@@ -109,6 +109,34 @@ trait ResolvesRecords
     }
 
     /**
+     * Valor del catálogo `grade_levels` para el grado escolar N (el "10" de "10A"). El catálogo
+     * puede numerar desde preescolar (Prekinder = 0 … "10.°" = 12), así que se busca por el
+     * nombre "N.°"; si no hay un nombre así, se usa N tal cual.
+     */
+    public static function gradeValueForSchoolYear(int $schoolGrade): int
+    {
+        foreach (GradeLevel::query()->orderBy('value')->get() as $level) {
+            if (preg_match('/^(\d{1,2})\s*(\.|°|º|$)/u', trim($level->name), $m) && (int) $m[1] === $schoolGrade) {
+                return $level->value;
+            }
+        }
+
+        return $schoolGrade;
+    }
+
+    /** Inverso: el grado escolar (0 = preescolar) de un valor del catálogo. */
+    public static function schoolYearForGradeValue(int $value): int
+    {
+        $name = (string) GradeLevel::query()->where('value', $value)->value('name');
+
+        if (preg_match('/^(\d{1,2})/', trim($name), $m)) {
+            return (int) $m[1];
+        }
+
+        return $name === '' ? $value : 0;
+    }
+
+    /**
      * Sección de un grado: la de otro grupo del mismo grado (cualquier año) o, si no hay, la
      * sección cuyo nombre declara el rango ("PAI (5.°–9.°)", "PEP (Preescolar–4.°)").
      */
@@ -129,7 +157,8 @@ trait ResolvesRecords
                 array_unshift($numbers, 0);
             }
 
-            if (count($numbers) >= 2 && $grade >= min($numbers) && $grade <= max($numbers)) {
+            $schoolGrade = self::schoolYearForGradeValue($grade);
+            if (count($numbers) >= 2 && $schoolGrade >= min($numbers) && $schoolGrade <= max($numbers)) {
                 return $section;
             }
         }

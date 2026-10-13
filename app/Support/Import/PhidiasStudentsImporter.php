@@ -3,6 +3,7 @@
 namespace App\Support\Import;
 
 use App\Models\Enrollment;
+use App\Models\GradeLevel;
 use App\Models\Group;
 use App\Models\Student;
 
@@ -36,14 +37,20 @@ class PhidiasStudentsImporter extends Importer
         'photo' => ['url de la foto', 'foto'],
     ];
 
-    /** Grado (valor del catálogo `grade_levels`) por la palabra con que Phidias nombra el curso. */
+    /** Grado escolar (1.° = 1 … 11.° = 11) por la palabra con que Phidias nombra el curso. */
     private const GRADE_WORDS = [
-        'prejardin' => 0, 'prekinder' => 0, 'pre kinder' => 0,
-        'jardin' => 1, 'kinder' => 1,
-        'transicion' => 2, 'preescolar' => 2,
-        'primero' => 3, 'segundo' => 4, 'tercero' => 5, 'cuarto' => 6, 'quinto' => 7,
-        'sexto' => 8, 'septimo' => 9, 'octavo' => 10, 'noveno' => 11, 'decimo' => 12,
-        'undecimo' => 13, 'once' => 13, 'onceavo' => 13,
+        'primero' => 1, 'segundo' => 2, 'tercero' => 3, 'cuarto' => 4, 'quinto' => 5,
+        'sexto' => 6, 'septimo' => 7, 'octavo' => 8, 'noveno' => 9, 'decimo' => 10,
+        'undecimo' => 11, 'once' => 11, 'onceavo' => 11,
+    ];
+
+    /**
+     * Niveles de preescolar como los nombra Phidias. Se buscan por nombre en el catálogo
+     * (Prekinder, Kinder, Transición); si el catálogo solo tiene "Preescolar", van ahí.
+     */
+    private const PRESCHOOL_WORDS = [
+        'prejardin' => 'prekinder', 'pre kinder' => 'prekinder', 'prekinder' => 'prekinder',
+        'jardin' => 'kinder', 'kinder' => 'kinder', 'transicion' => 'transicion', 'preescolar' => 'preescolar',
     ];
 
     /** Partículas que van en minúscula dentro de un nombre propio. */
@@ -262,23 +269,44 @@ class PhidiasStudentsImporter extends Importer
         $code = mb_strtoupper((string) array_pop($tokens));
         $label = implode(' ', $tokens);
 
-        // Las palabras más largas primero: "undecimo" contiene "decimo".
+        // Las palabras más largas primero: "undecimo" contiene "decimo" y "prekinder" contiene "kinder".
+        $byLength = fn (string $x, string $y) => strlen($y) <=> strlen($x);
         $words = self::GRADE_WORDS;
-        uksort($words, fn (string $x, string $y) => strlen($y) <=> strlen($x));
+        $preschool = self::PRESCHOOL_WORDS;
+        uksort($words, $byLength);
+        uksort($preschool, $byLength);
 
         $grade = null;
-        foreach ($words as $word => $value) {
+        foreach ($preschool as $word => $level) {
             if ($label !== '' && str_contains($label, $word)) {
-                $grade = $value;
+                $grade = self::preschoolValue($level);
                 break;
+            }
+        }
+        if ($grade === null) {
+            foreach ($words as $word => $schoolGrade) {
+                if ($label !== '' && str_contains($label, $word)) {
+                    $grade = self::gradeValueForSchoolYear($schoolGrade);
+                    break;
+                }
             }
         }
 
         if ($grade === null && preg_match('/^(\d{1,2})/', $code, $m)) {
-            $grade = (int) $m[1];
+            $grade = self::gradeValueForSchoolYear((int) $m[1]);
         }
 
         return [$grade, $code !== '' ? $code : null];
+    }
+
+    /** Valor del catálogo para un nivel de preescolar ("kinder" → Kinder, o "Preescolar" si no existe). */
+    private static function preschoolValue(string $level): int
+    {
+        $levels = GradeLevel::query()->orderBy('value')->get();
+        $match = $levels->first(fn (GradeLevel $g) => NameMatcher::normalize($g->name) === $level)
+            ?? $levels->first(fn (GradeLevel $g) => str_contains(NameMatcher::normalize($g->name), 'preescolar'));
+
+        return $match->value ?? 0;
     }
 
     /** "ANAYA RUIZ, NATALIA" → "Natalia Anaya Ruiz". */
