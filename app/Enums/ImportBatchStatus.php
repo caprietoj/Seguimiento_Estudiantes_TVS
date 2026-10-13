@@ -12,7 +12,7 @@ enum ImportBatchStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Validated => 'Validado (simulación)',
+            self::Validated => 'Simulación sin confirmar',
             self::Imported => 'Importado',
             self::Reverted => 'Revertido',
             self::Failed => 'Falló',

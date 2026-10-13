@@ -208,6 +208,18 @@ function ReportPanel({ batch }: { batch: BatchSummary & { report: Report } }) {
                 </div>
             </div>
 
+            {isSimulation ? (
+                <div className="border-warn bg-warn-soft mb-4 rounded-md border p-3 text-sm">
+                    <b>Esto es solo una simulación: todavía no se ha guardado nada.</b> Revisa el resultado y pulsa <b>Confirmar importación</b> para
+                    guardar {batch.rows_imported === 1 ? 'la fila' : `las ${batch.rows_imported} filas`} en la aplicación.
+                </div>
+            ) : batch.status === 'imported' ? (
+                <div className="border-good bg-good-soft mb-4 rounded-md border p-3 text-sm">
+                    <b>Importación guardada.</b> {batch.rows_imported === 1 ? 'La fila ya está' : `Las ${batch.rows_imported} filas ya están`} en la
+                    aplicación ({batch.school_year}).
+                </div>
+            ) : null}
+
             <div className="mb-4 grid grid-cols-3 gap-3 text-center">
                 <div className="bg-muted rounded-md p-3">
                     <div className="font-display text-2xl">{batch.rows_read}</div>
@@ -263,7 +275,8 @@ function ReportPanel({ batch }: { batch: BatchSummary & { report: Report } }) {
             {warnings.length > 0 && (
                 <div className="mb-4">
                     <button type="button" className="text-warn mb-1 text-sm font-semibold" onClick={() => setShowWarnings(!showWarnings)}>
-                        {showWarnings ? '▾' : '▸'} Avisos ({r.warnings_total ?? warnings.length}) — revísalos antes de confirmar
+                        {showWarnings ? '▾' : '▸'} Avisos ({r.warnings_total ?? warnings.length})
+                        {isSimulation ? ' — revísalos antes de confirmar' : ''}
                     </button>
                     {showWarnings && <IssueTable items={warnings} total={r.warnings_total ?? warnings.length} tone="warn" />}
                 </div>

@@ -24,7 +24,8 @@ trait ResolvesRecords
 
     public static function normalizeGroupCode(string $code): string
     {
-        $code = NameMatcher::normalize($code);
+        // "6°A", "6º A" y "6ª A" son el mismo 6A (los símbolos de ordinal no son una letra).
+        $code = NameMatcher::normalize(str_replace(['°', 'º', 'ª'], '', $code));
         $code = (string) preg_replace('/\b(grado|grupo|curso)\b/', '', $code);
 
         return mb_strtoupper(str_replace(' ', '', $code));
