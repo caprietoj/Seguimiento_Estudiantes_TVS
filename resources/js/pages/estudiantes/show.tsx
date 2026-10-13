@@ -89,7 +89,14 @@ interface FichaProps {
     schoolYear: string;
     schoolYears: { id: number; name: string }[];
     selectedYearId: number;
-    nav: { index: number | null; total: number; prev_id: number | null; next_id: number | null };
+    groups: { id: number; code: string; section: string }[];
+    nav: {
+        index: number | null;
+        total: number;
+        prev_id: number | null;
+        next_id: number | null;
+        students: { id: number; full_name: string }[];
+    };
     can: { change_photo: boolean };
     strengths: Note[];
     canWriteStrengths: boolean;
@@ -251,6 +258,7 @@ export default function FichaEstudiante(props: FichaProps) {
         schoolYear,
         schoolYears,
         selectedYearId,
+        groups,
         nav,
         can,
         strengths,
@@ -363,6 +371,22 @@ export default function FichaEstudiante(props: FichaProps) {
             <Head title={`Ficha · ${student.full_name}`} />
 
             <div className="mb-4 flex flex-wrap items-end gap-4">
+                {groups.length > 0 && (
+                    <div className="flex flex-col gap-1">
+                        <label className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">Grupo</label>
+                        <select
+                            className="border-border bg-background rounded-md border px-2 py-1.5 text-sm"
+                            value={group.id}
+                            onChange={(e) => router.get('/estudiantes', { grupo: e.target.value, anio: selectedYearId })}
+                        >
+                            {groups.map((g) => (
+                                <option key={g.id} value={g.id}>
+                                    {g.code} · {g.section}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
                 <div className="flex flex-col gap-1">
                     <label className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">Estudiante</label>
                     <div className="flex items-center gap-1">
@@ -370,21 +394,32 @@ export default function FichaEstudiante(props: FichaProps) {
                             variant="ghost"
                             size="sm"
                             disabled={!nav.prev_id}
-                            onClick={() => nav.prev_id && router.get(`/estudiantes/${nav.prev_id}`)}
+                            onClick={() => nav.prev_id && router.get(`/estudiantes/${nav.prev_id}`, { anio: selectedYearId })}
                         >
                             ←
                         </Button>
-                        <span className="font-mono text-sm">
-                            {nav.index} de {nav.total}
-                        </span>
+                        <select
+                            className="border-border bg-background max-w-[240px] rounded-md border px-2 py-1.5 text-sm"
+                            value={student.id}
+                            onChange={(e) => router.get(`/estudiantes/${e.target.value}`, { anio: selectedYearId })}
+                        >
+                            {nav.students.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                    {s.full_name}
+                                </option>
+                            ))}
+                        </select>
                         <Button
                             variant="ghost"
                             size="sm"
                             disabled={!nav.next_id}
-                            onClick={() => nav.next_id && router.get(`/estudiantes/${nav.next_id}`)}
+                            onClick={() => nav.next_id && router.get(`/estudiantes/${nav.next_id}`, { anio: selectedYearId })}
                         >
                             →
                         </Button>
+                        <span className="text-muted-foreground font-mono text-xs">
+                            {nav.index} de {nav.total}
+                        </span>
                     </div>
                 </div>
                 <div className="flex flex-col gap-1">

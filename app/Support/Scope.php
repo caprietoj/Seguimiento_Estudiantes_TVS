@@ -233,6 +233,7 @@ class Scope
     {
         return Group::query()
             ->where('school_year_id', $schoolYearId)
+            ->with('section')
             ->get()
             ->filter(fn (Group $group) => self::inScope($user, $group))
             ->values();

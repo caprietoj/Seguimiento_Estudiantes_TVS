@@ -7,18 +7,22 @@ use App\Models\Commitment;
 use App\Models\CommitteeDecision;
 use App\Models\Contribution;
 use App\Models\DisciplinaryCase;
+use App\Models\Enrollment;
 use App\Models\ExternalSupport;
 use App\Models\GradeLevel;
+use App\Models\Group;
 use App\Models\SchoolYear;
 use App\Models\Strategy;
 use App\Models\Student;
 use App\Models\Subject;
+use App\Models\User;
 use App\Support\Scope;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Dompdf\Dompdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -33,8 +37,20 @@ class StudentController extends Controller
     public function index(Request $request): RedirectResponse|Response
     {
         $user = $request->user();
-        $schoolYear = SchoolYear::where('is_active', true)->firstOrFail();
-        $group = Scope::visibleGroups($user, $schoolYear->id)->first();
+        $schoolYears = SchoolYear::orderByDesc('starts_on')->get();
+        $activeYear = $schoolYears->firstWhere('is_active', true) ?? $schoolYears->first();
+        abort_if($activeYear === null, 404);
+
+        $selectedYear = $request->integer('anio')
+            ? ($schoolYears->firstWhere('id', $request->integer('anio')) ?? $activeYear)
+            : $activeYear;
+
+        $visibleGroups = $this->visibleGroupsWithStudents($user, $selectedYear);
+
+        $group = $request->integer('grupo')
+            ? $visibleGroups->firstWhere('id', $request->integer('grupo'))
+            : null;
+        $group ??= $visibleGroups->first();
 
         if ($group === null) {
             return Inertia::render('reunion/sin-grupos');
@@ -43,7 +59,7 @@ class StudentController extends Controller
         $student = $group->students()->orderBy('full_name')->first();
         abort_if($student === null, 404, 'El grupo no tiene estudiantes matriculados.');
 
-        return redirect()->route('estudiantes.show', $student);
+        return redirect()->route('estudiantes.show', ['student' => $student, 'anio' => $selectedYear->id]);
     }
 
     /**
@@ -295,11 +311,15 @@ class StudentController extends Controller
             'schoolYear' => $selectedYear->name,
             'schoolYears' => $schoolYears->map(fn (SchoolYear $y) => ['id' => $y->id, 'name' => $y->name])->values(),
             'selectedYearId' => $selectedYear->id,
+            'groups' => $this->visibleGroupsWithStudents($user, $selectedYear)
+                ->map(fn (Group $g) => ['id' => $g->id, 'code' => $g->code, 'section' => $g->section->name])
+                ->values(),
             'nav' => [
                 'index' => $idx === false ? null : $idx + 1,
                 'total' => $siblings->count(),
                 'prev_id' => $idx !== false && $idx > 0 ? $siblings[$idx - 1]->id : null,
                 'next_id' => $idx !== false && $idx < $siblings->count() - 1 ? $siblings[$idx + 1]->id : null,
+                'students' => $siblings->map(fn (Student $s) => ['id' => $s->id, 'full_name' => $s->full_name])->values(),
             ],
             'can' => [
                 'change_photo' => Scope::photoWrite($user, $group),
@@ -328,5 +348,27 @@ class StudentController extends Controller
             'followUpOptions' => $followUps->map(fn ($f) => ['id' => $f->id, 'label' => $f->label()])->values(),
             'defaultFollowUpId' => $followUps->last()?->id,
         ];
+    }
+
+    /**
+     * Grupos visibles para el usuario en un año escolar, excluyendo los que no tienen
+     * estudiantes matriculados: el selector de grupo no debe ofrecer grupos vacíos
+     * (llevarían a un 404 al no haber ficha que mostrar).
+     *
+     * @return Collection<int, Group>
+     */
+    private function visibleGroupsWithStudents(User $user, SchoolYear $schoolYear)
+    {
+        $groupIdsWithStudents = Enrollment::query()
+            ->where('enrollments.school_year_id', $schoolYear->id)
+            ->join('students', 'students.id', '=', 'enrollments.student_id')
+            ->whereNull('students.deleted_at')
+            ->distinct()
+            ->pluck('enrollments.group_id')
+            ->all();
+
+        return Scope::visibleGroups($user, $schoolYear->id)
+            ->whereIn('id', $groupIdsWithStudents)
+            ->values();
     }
 }
