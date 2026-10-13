@@ -30,18 +30,24 @@ enum RoleName: string
      */
     public function matches(string $roleName): bool
     {
-        $name = mb_strtolower(trim($roleName));
+        return in_array(mb_strtolower(trim($roleName)), $this->aliases(), true);
+    }
 
-        if ($name === mb_strtolower($this->value) || $name === mb_strtolower($this->label())) {
-            return true;
-        }
-
-        return match ($this) {
-            self::Psicologia => in_array($name, ['psicologia', 'departamento de apoyo', 'departamento apoyo', 'dpto de apoyo', 'dpto. de apoyo'], true),
-            self::Emc => in_array($name, ['emc', 'coordinacion', 'coordinación'], true),
-            self::Profesor => in_array($name, ['profesor', 'profesora', 'docente'], true),
-            self::Admin => in_array($name, ['admin', 'administrador', 'administradora'], true),
+    /**
+     * Nombres (en minúscula) con los que este rol puede aparecer en la tabla compartida `roles`.
+     *
+     * @return list<string>
+     */
+    public function aliases(): array
+    {
+        $known = match ($this) {
+            self::Psicologia => ['psicologia', 'psicología', 'departamento de apoyo', 'departamento apoyo', 'dpto de apoyo', 'dpto. de apoyo'],
+            self::Emc => ['emc', 'coordinacion', 'coordinación'],
+            self::Profesor => ['profesor', 'profesora', 'docente', 'docentes', 'profesores'],
+            self::Admin => ['admin', 'administrador', 'administradora'],
         };
+
+        return array_values(array_unique([mb_strtolower($this->value), mb_strtolower($this->label()), ...$known]));
     }
 
     /** Resuelve la etiqueta legible de un rol a partir de su nombre en la base de datos, sin lanzar excepción. */

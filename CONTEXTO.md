@@ -61,7 +61,8 @@ cámbiala ahí y en ningún otro lado.
   ya instalados en `resources/js/components/ui/`.
 - `spatie/laravel-permission` (roles) + Policies de Laravel + `App\Support\Scope`
   (reglas de alcance, ver arriba).
-- `maatwebsite/excel` (instalado, **sin usar todavía** — es para la Fase 5).
+- `phpoffice/phpspreadsheet` (vía `maatwebsite/excel`): lo usa el importador de la Fase 5
+  (`app/Support/Import/`) para leer los Excel y generar las plantillas.
 - `barryvdh/laravel-dompdf` (ya en uso: exportar la ficha a PDF).
 - Pest (pruebas), Pint (estilo), Larastan/PHPStan nivel 6 (análisis estático),
   ESLint + Prettier (frontend).
@@ -116,8 +117,9 @@ infiere bien los casts declarados como método — usa siempre la forma de propi
 Ver el primer punto de la sección "Fase 1" en `DECISIONES.md` para el detalle de este
 hallazgo.
 
-**No hay commits de git todavía** (el repo no está inicializado). Pregúntale al
-usuario si quiere que inicialices git antes de hacerlo.
+El repo vive en GitHub (`caprietoj/Seguimiento_Estudiantes_TVS`). La carpeta `tests/`
+está en `.gitignore` a propósito (el CI la salta si no existe); las pruebas se corren
+localmente.
 
 ## Qué está construido y qué falta
 
@@ -131,11 +133,14 @@ seeders con datos ficticios, Docker (sin probar), CI (`.github/workflows/ci.yml`
 ### ⚠️ Fase 2 — Usuarios y permisos (parcial)
 Lo que SÍ existe: roles con spatie, `App\Support\Scope` con todas las reglas de la
 matriz de permisos, Policies (`GroupPolicy`, `StudentPolicy`) que delegan en `Scope`.
+Login institucional TVS sin registro público y SSO desde la intranet
+(`IntranetSsoController`). Los usuarios y roles vienen de la intranet: un rol se
+reconoce por sus alias (`RoleName::aliases()`, p. ej. "Docente" = profesor). Para
+listar usuarios por rol usa `User::withRoleName(RoleName::Profesor)`, **no**
+`User::role('profesor')` de spatie (exige el nombre exacto y deja por fuera a los
+docentes de la intranet).
 
 Lo que **falta** de esta fase:
-- El registro público (`/register`) **sigue activo** — el encargo pide que NO lo
-  esté ("sin registro público"). Hay que quitar la ruta y el controlador, o al menos
-  bloquearlo.
 - No hay cambio de contraseña obligatorio en el primer ingreso
   (`users.must_change_password` ya existe en la base de datos, pero nada en el
   frontend/middleware lo hace cumplir todavía).
@@ -205,6 +210,12 @@ Existe (todo bajo `/admin`, protegido por `Gate::define('admin', ...)` en
   número/periodo; y eliminar con salvaguarda (bloquea el borrado si ya tiene datos asociados).
   Registra todas las acciones administrativas en `AuditLog`. Además, la ficha del estudiante
   ahora expone el selector de periodo/seguimiento para vincular aportes al seguimiento activo.
+- **Asignaciones** (`/admin/asignaciones`) — profesor → grupo → asignaturas y dirección de
+  grupo, por año escolar; avisa qué profesores no tienen grupo (no ven ningún estudiante).
+  Es lo que define qué ve cada docente: `Scope::inScope` solo le abre los grupos donde
+  tiene asignación o es director(a). Sin grupo, la reunión y la ficha muestran
+  `reunion/sin-grupos` (no un 404).
+- **Importar** (`/admin/importar`) — ver Fase 5.
 
 Lo que **falta** de esta fase (pedido explícitamente en el encargo, sección 6.5):
 
@@ -213,8 +224,6 @@ Lo que **falta** de esta fase (pedido explícitamente en el encargo, sección 6.
   mecanismo es `php artisan app:crear-admin correo` por consola
   (`app/Console/Commands/CrearAdmin.php`) — sirve para el primer ADMIN, no reemplaza
   la pantalla de administración de usuarios.
-- **Asignaciones de profesores** (profesor → grupo → asignatura): sin pantalla; hoy
-  solo existen las que crea `DemoDataSeeder`.
 - **Auditoría**: la tabla `audit_logs` y el modelo `AuditLog` ya están conectados y en uso
   en los módulos administrativos de estudiantes y seguimientos (`admin.estudiantes`,
   `admin.seguimientos`). Falta extender el registro a las demás acciones del ADMIN y
@@ -222,14 +231,33 @@ Lo que **falta** de esta fase (pedido explícitamente en el encargo, sección 6.
 - Carga masiva de usuarios/asignaturas por Excel (el encargo la menciona como opción
   para asignaturas y usuarios).
 
-### ❌ Fase 5 — Migración de datos (sin empezar)
-El asistente completo descrito en el encargo (leer el Excel actual columna por
-nombre de encabezado, no por posición; emparejar estudiantes por nombre con
-porcentaje de similitud; plantillas descargables; simulación sin guardar nada; Job en
-cola con barra de progreso; reversión de un lote completo). La tabla `import_batches`
-y las columnas de origen (`import_batch_id`, `source_file`, `source_row`) ya existen
-en casi todas las tablas de contenido, así que el modelo de datos está listo para
-recibirlo, pero no hay ni lector de Excel ni controlador ni vista.
+### ⚠️ Fase 5 — Migración de datos (parcial)
+`/admin/importar` (`Admin\ImportController` + `resources/js/pages/admin/importar.tsx`,
+lógica en `app/Support/Import/`). Flujo: subir → **simulación** (corre el importador
+completo dentro de una transacción y la revierte: lo simulado es exactamente lo que se
+guardará) → reporte fila por fila (errores, avisos, vista previa) → confirmar → lote
+en `import_batches`, **revertible completo** (`ImportService::revert`).
+
+Plantillas soportadas hoy (`ImportService::SUPPORTED`):
+- **Formato actual "Seguimiento y acuerdos"** (`CurrentFormatImporter`): una hoja por
+  reunión; grupo desde el título, periodo/seguimiento/fecha/director desde la cabecera;
+  columnas por **encabezado**, no por posición. Cada celda → aporte del campo
+  correspondiente; Estrategias + Responsables → estrategia individual; Fecha → fecha de
+  la reunión de grupo; director → se asigna si el grupo no tiene. No duplica aportes
+  idénticos al reimportar.
+- **Estudiantes y matrículas** (`StudentsImporter`).
+- **Asignaciones de profesores** (`TeachingAssignmentsImporter`).
+
+Emparejamiento de nombres en `NameMatcher` (sin tildes/mayúsculas, orden de palabras
+indiferente; ≥ 88 % automático con aviso, empates → error). Lo que no queda marcado con
+`import_batch_id` (direcciones de grupo, cambios de grupo, reuniones/seguimientos/grupos
+creados) se guarda en `error_report.undo` para poder revertirlo.
+
+Falta: el resto de plantillas de `ImportTemplateType` (usuarios, desempeño, compromisos,
+apoyos externos, comité, disciplinario), Job en cola con barra de progreso (hoy es
+síncrono; con archivos del tamaño del Excel del colegio tarda segundos) y estrategias
+grupales del formato actual si el colegio las tiene en otra sección de la hoja (hoy se
+avisa que hay contenido debajo de la tabla y no se importa).
 
 ### ❌ Fase 6 — Cierre (sin empezar)
 Polling casi en tiempo real en la reunión de grupo (hoy no hay refresco automático:

@@ -101,6 +101,35 @@ construir. Se actualiza en cada fase.
     Las etiquetas mostradas en grupos, ficha y PDF salen del catálogo
     (`grade_label` / `GradeLevel::labelFor`), no de `{grado}.°`.
 
+## Fase 4 y 5 — Asignaciones e importación
+
+13. **Simulación = importación revertida.** En vez de un validador aparte, la simulación ejecuta
+    el mismo importador dentro de una transacción y la revierte. Así no hay dos lógicas que
+    puedan diferir: lo que el ADMIN ve en la simulación es lo que se guarda al confirmar. La
+    importación es síncrona (no Job en cola): los archivos del colegio son de cientos de filas.
+
+14. **Filas con error no bloquean el lote.** Se importan las filas válidas y las que tienen
+    error quedan listadas en el reporte. El ADMIN decide en la simulación si confirma así o
+    corrige el archivo.
+
+15. **Formato actual: autor de los aportes = quien importa.** El Excel no dice qué profesor
+    escribió cada celda, así que los aportes y estrategias importados quedan a nombre del
+    ADMIN que importa, marcados con lote, archivo y fila de origen (`source_file`,
+    `source_row`).
+
+16. **"Observación" del Excel → aporte de campo Observación**, que es una columna de la
+    Reunión de grupo y no una sección de la Ficha (decisión 4 de `CONTEXTO.md`).
+
+17. **Estudiantes no encontrados se crean por defecto** (casilla en la pantalla), con aviso
+    en la simulación. Un estudiante que el archivo pone en un grupo distinto al de su
+    matrícula del año es error en el formato actual y cambio de grupo (revertible) en la
+    plantilla de estudiantes.
+
+18. **Roles de la intranet por alias.** `User::role('profesor')` de spatie no encontraba a
+    los docentes cuyo rol en la intranet se llama distinto ("Docente"), así que no se podían
+    elegir como director(a). Se agregó `RoleName::aliases()` y el scope
+    `User::withRoleName()`, que usan la misma regla que `Scope`.
+
 ## Pendiente de confirmar con el colegio (no bloquea el desarrollo)
 
 - Si además de las 6 asignaciones docentes de ejemplo (Historia, Matemáticas AA y
