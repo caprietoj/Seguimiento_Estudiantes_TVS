@@ -130,6 +130,17 @@ construir. Se actualiza en cada fase.
     elegir como director(a). Se agregó `RoleName::aliases()` y el scope
     `User::withRoleName()`, que usan la misma regla que `Scope`.
 
+19. **Phidias: solo los campos que la aplicación ya tiene.** De las ~56 columnas del export se
+    usan código, nombre, curso, estado y foto. Documento, dirección, EPS, rutas, familia, etc.
+    no se guardan (no existen en el modelo y son datos sensibles que la app no necesita).
+
+20. **Fotos de Phidias en cola, no en la petición.** Descargar cientos de fotos dentro de la
+    confirmación superaría el tiempo máximo de PHP. Se importan los datos y un job baja las
+    fotos. Nunca reemplaza una foto subida a mano y la reversión solo quita las que trajo.
+
+21. **Retirados en Phidias:** si ya existen en la app quedan inactivos (revertible); si no
+    existen, no se crean.
+
 ## Pendiente de confirmar con el colegio (no bloquea el desarrollo)
 
 - Si además de las 6 asignaciones docentes de ejemplo (Historia, Matemáticas AA y

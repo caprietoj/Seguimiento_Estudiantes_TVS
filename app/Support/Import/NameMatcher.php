@@ -48,6 +48,12 @@ class NameMatcher
             return 100.0;
         }
 
+        // Daniel/Daniela, Martín/Martina, Mario/María: casi iguales letra a letra, pero son otra
+        // persona (a menudo hermanos con los mismos apellidos). Nunca se emparejan solos.
+        if (self::hasGenderVariant(explode(' ', $ka), explode(' ', $kb))) {
+            return 60.0;
+        }
+
         similar_text($ka, $kb, $byText);
         $maxLen = max(strlen($ka), strlen($kb));
         $byEdit = $maxLen <= 255 ? (1 - levenshtein($ka, $kb) / $maxLen) * 100 : $byText;
@@ -60,6 +66,33 @@ class NameMatcher
         $bySubset = $shared >= 2 && $shared === min(count($ta), count($tb)) ? 90.0 : 0.0;
 
         return round(max($byText, $byEdit, $bySubset), 1);
+    }
+
+    /**
+     * @param  list<string>  $a
+     * @param  list<string>  $b
+     */
+    private static function hasGenderVariant(array $a, array $b): bool
+    {
+        $onlyA = array_diff($a, $b);
+        $onlyB = array_diff($b, $a);
+
+        foreach ($onlyA as $x) {
+            foreach ($onlyB as $y) {
+                if (strlen($x) < 3 || strlen($y) < 3) {
+                    continue;
+                }
+                [$short, $long] = strlen($x) <= strlen($y) ? [$x, $y] : [$y, $x];
+                if ($long === $short.'a' || $long === $short.'o') {
+                    return true;
+                }
+                if (strlen($x) === strlen($y) && substr($x, 0, -1) === substr($y, 0, -1) && in_array(substr($x, -1).substr($y, -1), ['ao', 'oa'], true)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

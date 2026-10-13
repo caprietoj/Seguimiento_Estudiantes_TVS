@@ -6,6 +6,7 @@ use App\Enums\AuditAction;
 use App\Enums\ImportBatchStatus;
 use App\Enums\ImportTemplateType;
 use App\Http\Controllers\Controller;
+use App\Jobs\FetchPhidiasPhotos;
 use App\Models\AuditLog;
 use App\Models\ImportBatch;
 use App\Models\SchoolYear;
@@ -49,6 +50,7 @@ class ImportController extends Controller
             'templates' => collect(ImportService::SUPPORTED)->map(fn (ImportTemplateType $t) => [
                 'value' => $t->value,
                 'label' => $t->label(),
+                'has_template' => $t !== ImportTemplateType::PhidiasStudents,
             ])->values(),
             'maxMb' => (int) config('seguimiento.migracion.max_mb', 20),
             'batches' => $batches->map(fn (ImportBatch $b) => $this->batchSummary($b))->values(),
@@ -64,11 +66,13 @@ class ImportController extends Controller
         $maxKb = (int) config('seguimiento.migracion.max_mb', 20) * 1024;
 
         $data = $request->validate([
-            'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', "max:{$maxKb}"],
+            // Por extensión y no por contenido: el .xls de Phidias es una tabla HTML por dentro.
+            'file' => ['required', 'file', 'extensions:xlsx,xls,csv', "max:{$maxKb}"],
             'template_type' => ['required', Rule::in(array_map(fn (ImportTemplateType $t) => $t->value, ImportService::SUPPORTED))],
             'school_year_id' => ['required', 'integer', 'exists:school_years,id'],
             'group_code' => ['nullable', 'string', 'max:20'],
             'create_students' => ['boolean'],
+            'download_photos' => ['boolean'],
         ], [], [
             'file' => 'archivo',
             'template_type' => 'tipo de importación',
@@ -88,6 +92,7 @@ class ImportController extends Controller
         $options = [
             'group_code' => $data['group_code'] ?? null,
             'create_students' => (bool) ($data['create_students'] ?? true),
+            'download_photos' => (bool) ($data['download_photos'] ?? true),
         ];
 
         $report = ImportService::importer($type, $year, $request->user(), $options)
@@ -146,6 +151,10 @@ class ImportController extends Controller
 
         $this->audit($request, AuditAction::Import, $batch, ['created' => $report->created, 'rows_imported' => $report->rowsImported]);
 
+        if ($report->photos !== [] && $batch->status === ImportBatchStatus::Imported) {
+            FetchPhidiasPhotos::dispatch($batch->id);
+        }
+
         return to_route('admin.importar.index', ['lote' => $batch->id]);
     }
 
@@ -185,6 +194,7 @@ class ImportController extends Controller
     {
         $templateType = ImportTemplateType::tryFrom($type);
         abort_unless($templateType !== null && in_array($templateType, ImportService::SUPPORTED, true), 404);
+        abort_if($templateType === ImportTemplateType::PhidiasStudents, 404, 'Este archivo se exporta directamente desde Phidias.');
 
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();

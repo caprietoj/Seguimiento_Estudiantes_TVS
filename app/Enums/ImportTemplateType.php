@@ -7,6 +7,7 @@ enum ImportTemplateType: string
     case CurrentFormat = 'current_format';
     case Users = 'users';
     case StudentsEnrollments = 'students_enrollments';
+    case PhidiasStudents = 'phidias_students';
     case Groups = 'groups';
     case TeachingAssignments = 'teaching_assignments';
     case Grades = 'grades';
@@ -23,6 +24,7 @@ enum ImportTemplateType: string
             self::CurrentFormat => 'Formato actual (Seguimiento y acuerdos)',
             self::Users => 'Usuarios',
             self::StudentsEnrollments => 'Estudiantes y matrículas por año',
+            self::PhidiasStudents => 'Estudiantes desde Phidias',
             self::Groups => 'Grupos y dirección de grupo',
             self::TeachingAssignments => 'Asignaciones de profesores',
             self::Grades => 'Desempeño académico',

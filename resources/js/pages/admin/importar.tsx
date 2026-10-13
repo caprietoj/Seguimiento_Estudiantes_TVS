@@ -21,6 +21,7 @@ interface Report {
     warnings_total?: number;
     preview?: Record<string, string | number | null>[];
     reverted?: Record<string, number>;
+    photos_result?: { ok: number; failed: number; finished_at: string };
     reverted_at?: string;
 }
 
@@ -42,7 +43,7 @@ interface BatchSummary {
 interface Props {
     schoolYears: { id: number; name: string; is_read_only: boolean }[];
     activeYearId: number | null;
-    templates: { value: string; label: string }[];
+    templates: { value: string; label: string; has_template: boolean }[];
     maxMb: number;
     batches: BatchSummary[];
     selected: (BatchSummary & { report: Report }) | null;
@@ -51,6 +52,8 @@ interface Props {
 const DESCRIPTIONS: Record<string, string> = {
     current_format:
         'El Excel «Seguimiento y acuerdos» que usa hoy el colegio, tal cual: puede traer varias hojas (una por reunión). El grupo se toma del título y el periodo, seguimiento, fecha y director de la cabecera.',
+    phidias_students:
+        'El archivo «exported.xls» que descargas de Phidias, sin modificarlo. Toma solo código, nombre, curso, estado y foto; las demás columnas se ignoran.',
     students_enrollments:
         'Una fila por estudiante: crea los que no existen y los matricula en su grupo del año escolar elegido (crea el grupo si hace falta).',
     teaching_assignments:
@@ -87,7 +90,17 @@ const PREVIEW_LABELS: Record<string, string> = {
     docente: 'Docente',
     correo: 'Correo',
     asignacion: 'Asignación',
+    estado: 'Estado',
+    accion: 'Qué pasa',
 };
+
+const PHIDIAS_MAPPING = [
+    ['Código', 'Código institucional (con él se reconoce al estudiante en cada importación)'],
+    ['Estudiante («APELLIDOS, NOMBRES»)', 'Nombre completo «Nombres Apellidos»'],
+    ['Sección («Sexto 6A»)', 'Grupo 6A del año escolar elegido (se crea si no existe)'],
+    ['Estado', 'Activo / inactivo'],
+    ['URL de la foto', 'Foto del estudiante, solo si todavía no tiene (se descarga en segundo plano)'],
+];
 
 function StatusBadge({ status, label }: { status: BatchSummary['status']; label: string }) {
     return <span className={'rounded-full px-2 py-0.5 text-[11px] font-semibold ' + STATUS_STYLE[status]}>{label}</span>;
@@ -220,6 +233,14 @@ function ReportPanel({ batch }: { batch: BatchSummary & { report: Report } }) {
                             </span>
                         ))}
                     </div>
+                    {batch.status === 'imported' && (r.created?.['Fotos por traer de Phidias'] ?? 0) > 0 && (
+                        <p className="text-muted-foreground mt-2 text-xs">
+                            {r.photos_result
+                                ? `Fotos: ${r.photos_result.ok} descargadas` +
+                                  (r.photos_result.failed > 0 ? `, ${r.photos_result.failed} no se pudieron traer.` : '.')
+                                : 'Las fotos se están descargando en segundo plano; recarga la página en unos minutos para ver el resultado.'}
+                        </p>
+                    )}
                 </div>
             )}
 
@@ -282,17 +303,24 @@ function ReportPanel({ batch }: { batch: BatchSummary & { report: Report } }) {
 }
 
 export default function AdminImportar({ schoolYears, activeYearId, templates, maxMb, batches, selected }: Props) {
-    const form = useForm<{ file: File | null; template_type: string; school_year_id: number | string; group_code: string; create_students: boolean }>(
-        {
-            file: null,
-            template_type: templates[0]?.value ?? 'current_format',
-            school_year_id: activeYearId ?? schoolYears[0]?.id ?? '',
-            group_code: '',
-            create_students: true,
-        },
-    );
+    const form = useForm<{
+        file: File | null;
+        template_type: string;
+        school_year_id: number | string;
+        group_code: string;
+        create_students: boolean;
+        download_photos: boolean;
+    }>({
+        file: null,
+        template_type: templates[0]?.value ?? 'current_format',
+        school_year_id: activeYearId ?? schoolYears[0]?.id ?? '',
+        group_code: '',
+        create_students: true,
+        download_photos: true,
+    });
     const [fileInputKey, setFileInputKey] = useState(0);
     const isCurrent = form.data.template_type === 'current_format';
+    const isPhidias = form.data.template_type === 'phidias_students';
     const year = schoolYears.find((y) => String(y.id) === String(form.data.school_year_id));
 
     return (
@@ -323,7 +351,7 @@ export default function AdminImportar({ schoolYears, activeYearId, templates, ma
             >
                 <h3 className="font-display text-primary mb-3 text-lg">Nueva importación</h3>
 
-                <div className="mb-4 grid gap-3 md:grid-cols-3">
+                <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     {templates.map((t) => (
                         <label
                             key={t.value}
@@ -341,13 +369,17 @@ export default function AdminImportar({ schoolYears, activeYearId, templates, ma
                             />
                             <span className="text-sm font-semibold">{t.label}</span>
                             <span className="text-muted-foreground mt-1 block text-xs">{DESCRIPTIONS[t.value]}</span>
-                            <a
-                                href={`/admin/importar/plantilla/${t.value}`}
-                                className="text-primary mt-2 inline-block text-xs underline"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                Descargar plantilla
-                            </a>
+                            {t.has_template ? (
+                                <a
+                                    href={`/admin/importar/plantilla/${t.value}`}
+                                    className="text-primary mt-2 inline-block text-xs underline"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    Descargar plantilla
+                                </a>
+                            ) : (
+                                <span className="text-muted-foreground mt-2 block text-xs italic">Phidias → Estudiantes → Exportar</span>
+                            )}
                         </label>
                     ))}
                 </div>
@@ -405,6 +437,16 @@ export default function AdminImportar({ schoolYears, activeYearId, templates, ma
                         Crear los estudiantes que no existan y matricularlos en el grupo (si no, esas filas se reportan como error)
                     </label>
                 )}
+                {isPhidias && (
+                    <label className="mt-3 flex items-center gap-2 text-sm">
+                        <input
+                            type="checkbox"
+                            checked={form.data.download_photos}
+                            onChange={(e) => form.setData('download_photos', e.target.checked)}
+                        />
+                        Traer las fotos de Phidias a los estudiantes que todavía no tienen foto (se descargan en segundo plano después de confirmar)
+                    </label>
+                )}
                 {year?.is_read_only && (
                     <p className="text-warn mt-2 text-xs">
                         Este año escolar es de solo lectura: la importación sí está permitida para cargar históricos.
@@ -429,6 +471,26 @@ export default function AdminImportar({ schoolYears, activeYearId, templates, ma
                             Las columnas se reconocen por su encabezado, no por su posición. Los estudiantes se buscan por nombre (sin importar
                             tildes, mayúsculas ni el orden nombre/apellido) entre los matriculados en el grupo y luego en todo el colegio. Los aportes
                             quedan registrados a nombre de quien importa.
+                        </p>
+                    </details>
+                )}
+                {isPhidias && (
+                    <details className="mt-4 text-sm" open>
+                        <summary className="text-primary cursor-pointer font-semibold">¿Qué toma del archivo de Phidias?</summary>
+                        <table className="mt-2 w-full max-w-3xl text-xs">
+                            <tbody>
+                                {PHIDIAS_MAPPING.map(([from, to]) => (
+                                    <tr key={from} className="border-border border-t">
+                                        <td className="w-1/3 p-1.5 font-medium">{from}</td>
+                                        <td className="text-muted-foreground p-1.5">→ {to}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        <p className="text-muted-foreground mt-2 text-xs">
+                            Las demás columnas (documento, dirección, ruta, EPS…) no se importan. Phidias manda sobre la matrícula: si un estudiante
+                            está en otro grupo ese año, se cambia al de Phidias. Los retirados que no están en la aplicación no se crean, y se avisa
+                            de los estudiantes del grupo que están en la aplicación pero no en el archivo.
                         </p>
                     </details>
                 )}

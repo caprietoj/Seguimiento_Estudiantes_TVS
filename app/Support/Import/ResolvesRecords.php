@@ -35,7 +35,7 @@ trait ResolvesRecords
      * se permite, lo crea deduciendo el grado del número y la sección de la columna "Sección"
      * o de otro grupo del mismo grado.
      */
-    protected function resolveGroup(string $rawCode, ?string $sectionName, bool $allowCreate, ImportReport $report, ?string $sheet, ?int $row): ?Group
+    protected function resolveGroup(string $rawCode, ?string $sectionName, bool $allowCreate, ImportReport $report, ?string $sheet, ?int $row, ?int $grade = null): ?Group
     {
         $wanted = self::normalizeGroupCode($rawCode);
 
@@ -64,13 +64,16 @@ trait ResolvesRecords
             return null;
         }
 
-        if (! preg_match('/^(\d{1,2})/', $wanted, $m) || ! GradeLevel::where('value', (int) $m[1])->exists()) {
+        if ($grade === null && preg_match('/^(\d{1,2})/', $wanted, $m)) {
+            $grade = (int) $m[1];
+        }
+
+        if ($grade === null || ! GradeLevel::where('value', $grade)->exists()) {
             $report->error($sheet, $row, "No se pudo deducir el grado del grupo «{$rawCode}» para crearlo.");
 
             return null;
         }
 
-        $grade = (int) $m[1];
         $section = null;
 
         if ($sectionName !== null && trim($sectionName) !== '') {
@@ -81,12 +84,11 @@ trait ResolvesRecords
                 return null;
             }
         } else {
-            $sectionId = Group::where('grade', $grade)->orderByDesc('id')->value('section_id');
-            $section = $sectionId ? Section::find($sectionId) : null;
+            $section = self::sectionForGrade($grade);
         }
 
         if ($section === null) {
-            $report->error($sheet, $row, "Para crear el grupo «{$rawCode}» hace falta indicar su sección (columna «Sección»).");
+            $report->error($sheet, $row, "No se pudo saber a qué sección pertenece el grupo «{$rawCode}». Crea primero un grupo de ese grado en Administración · Grupos, o indica la sección.");
 
             return null;
         }
@@ -103,6 +105,35 @@ trait ResolvesRecords
         $report->warning($sheet, $row, "Se creará el grupo {$group->code} ({$section->name}) en {$this->schoolYear->name}.");
 
         return $this->groupCache[$group->id] = $group;
+    }
+
+    /**
+     * Sección de un grado: la de otro grupo del mismo grado (cualquier año) o, si no hay, la
+     * sección cuyo nombre declara el rango ("PAI (5.°–9.°)", "PEP (Preescolar–4.°)").
+     */
+    public static function sectionForGrade(int $grade): ?Section
+    {
+        $sectionId = Group::where('grade', $grade)->orderByDesc('id')->value('section_id');
+
+        if ($sectionId !== null) {
+            return Section::find($sectionId);
+        }
+
+        foreach (Section::all() as $section) {
+            $name = NameMatcher::normalize($section->name);
+            preg_match_all('/\d{1,2}/', $name, $m);
+            $numbers = array_map('intval', $m[0]);
+
+            if (str_contains($name, 'preescolar') || str_contains($name, 'transicion') || str_contains($name, 'kinder')) {
+                array_unshift($numbers, 0);
+            }
+
+            if (count($numbers) >= 2 && $grade >= min($numbers) && $grade <= max($numbers)) {
+                return $section;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -145,11 +176,17 @@ trait ResolvesRecords
         if ($result['match'] !== null && $result['score'] >= NameMatcher::AUTO) {
             /** @var Student $student */
             $student = $result['match'];
+            if ($code !== null && $student->institutional_code !== null && $student->institutional_code !== $code) {
+                $report->error($sheet, $row, "«{$name}» (código {$code}) se parece a «{$student->full_name}», que tiene otro código ({$student->institutional_code}). Revisa si es la misma persona.");
+
+                return null;
+            }
             if ($result['score'] < 100) {
                 $report->warning($sheet, $row, "«{$name}» se emparejó con «{$student->full_name}» ({$result['score']} % de similitud).");
             }
             if ($code !== null && $student->institutional_code === null) {
                 $student->update(['institutional_code' => $code]);
+                $report->remember(['type' => 'student_code_set', 'id' => $student->id]);
             }
 
             return $student;
@@ -167,6 +204,11 @@ trait ResolvesRecords
         $student->save();
         $this->allStudents?->push($student);
         $report->count('Estudiantes nuevos');
+
+        if (! $this->warnsOnNewStudents()) {
+            return $student;
+        }
+
         $hint = $result['match'] instanceof Student && $result['score'] >= 60 ? " (el más parecido es «{$result['match']->full_name}», {$result['score']} %)" : '';
         $report->warning($sheet, $row, "«{$student->full_name}» no existe: se creará como estudiante nuevo{$hint}.");
 
@@ -214,6 +256,12 @@ trait ResolvesRecords
         $report->warning($sheet, $row, "{$student->full_name} se cambia de {$currentCode} a {$group->code}.");
         $report->count('Cambios de grupo');
 
+        return true;
+    }
+
+    /** Si cada estudiante nuevo genera un aviso (en Phidias lo normal es que haya nuevos). */
+    protected function warnsOnNewStudents(): bool
+    {
         return true;
     }
 

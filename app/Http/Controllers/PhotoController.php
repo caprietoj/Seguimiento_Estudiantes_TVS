@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Student;
 use App\Support\Scope;
+use App\Support\StudentPhoto;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -16,8 +17,6 @@ use Illuminate\Support\Facades\Storage;
  */
 class PhotoController extends Controller
 {
-    private const SIZE = 480;
-
     public function store(Request $request, Student $student): RedirectResponse
     {
         $group = $student->currentGroup();
@@ -32,7 +31,9 @@ class PhotoController extends Controller
         ]);
 
         $path = "fotos/{$student->id}.jpg";
-        Storage::disk('local')->put($path, $this->cropToSquareJpeg($request->file('photo')->getRealPath()));
+        $jpeg = StudentPhoto::squareJpeg((string) file_get_contents($request->file('photo')->getRealPath()));
+        abort_if($jpeg === null, 422, 'No se pudo leer la imagen.');
+        Storage::disk('local')->put($path, $jpeg);
 
         $student->update(['photo_path' => $path]);
 
@@ -53,29 +54,5 @@ class PhotoController extends Controller
         return response(Storage::disk('local')->get($student->photo_path), 200)
             ->header('Content-Type', 'image/jpeg')
             ->header('Cache-Control', 'private, max-age=3600');
-    }
-
-    private function cropToSquareJpeg(string $sourcePath): string
-    {
-        $image = imagecreatefromstring(file_get_contents($sourcePath));
-        abort_if($image === false, 422, 'No se pudo leer la imagen.');
-
-        $width = imagesx($image);
-        $height = imagesy($image);
-        $side = min($width, $height);
-        $srcX = (int) (($width - $side) / 2);
-        $srcY = (int) (($height - $side) / 2);
-
-        $square = imagecreatetruecolor(self::SIZE, self::SIZE);
-        imagecopyresampled($square, $image, 0, 0, $srcX, $srcY, self::SIZE, self::SIZE, $side, $side);
-
-        ob_start();
-        imagejpeg($square, null, 82);
-        $contents = ob_get_clean();
-
-        imagedestroy($image);
-        imagedestroy($square);
-
-        return $contents;
     }
 }

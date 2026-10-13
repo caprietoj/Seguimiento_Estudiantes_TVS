@@ -245,11 +245,22 @@ Plantillas soportadas hoy (`ImportService::SUPPORTED`):
   correspondiente; Estrategias + Responsables → estrategia individual; Fecha → fecha de
   la reunión de grupo; director → se asigna si el grupo no tiene. No duplica aportes
   idénticos al reimportar.
+- **Estudiantes desde Phidias** (`PhidiasStudentsImporter`): el `exported.xls` de
+  Phidias tal cual (es una tabla HTML con extensión .xls; `SheetData` la lee con DOM y solo
+  toma celdas de primer nivel, "No hay datos" = vacío). Usa Código (llave), Estudiante
+  ("APELLIDOS, NOMBRES" → "Nombres Apellidos"), Sección ("Sexto 6A" → grupo 6A, grado 6),
+  Estado y URL de la foto. Phidias manda sobre la matrícula del año (cambia de grupo,
+  revertible). Las fotos se bajan después de confirmar con el job `FetchPhidiasPhotos`
+  (cola `database`; en desarrollo hace falta `composer run dev` o `php artisan queue:work`),
+  solo para quien no tiene foto, como `fotos/{id}-phidias.jpg`, y solo desde hosts de
+  Phidias/S3 por https.
 - **Estudiantes y matrículas** (`StudentsImporter`).
 - **Asignaciones de profesores** (`TeachingAssignmentsImporter`).
 
 Emparejamiento de nombres en `NameMatcher` (sin tildes/mayúsculas, orden de palabras
-indiferente; ≥ 88 % automático con aviso, empates → error). Lo que no queda marcado con
+indiferente; ≥ 88 % automático con aviso, empates → error; Daniel/Daniela, Martín/Martina
+nunca se emparejan solos). Si el nombre coincide pero el estudiante ya tiene **otro**
+código institucional, es error (no se mezclan dos personas). Lo que no queda marcado con
 `import_batch_id` (direcciones de grupo, cambios de grupo, reuniones/seguimientos/grupos
 creados) se guarda en `error_report.undo` para poder revertirlo.
 

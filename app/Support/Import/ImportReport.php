@@ -23,6 +23,9 @@ class ImportReport
     /** @var list<array{sheet: ?string, row: ?int, message: string}> */
     public array $warnings = [];
 
+    /** @var array<int, string> Fotos por descargar después de importar: id del estudiante => URL. */
+    public array $photos = [];
+
     /** @var list<array<string, string|int|null>> Vista previa de lo que entra (máx. 200 filas). */
     public array $preview = [];
 
@@ -76,6 +79,7 @@ class ImportReport
             'warnings_total' => count($this->warnings),
             'preview' => $this->preview,
             'undo' => $this->undo,
+            'photos' => $this->photos,
         ];
     }
 }
