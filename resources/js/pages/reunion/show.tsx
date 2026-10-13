@@ -130,14 +130,14 @@ interface ReunionProps {
 }
 
 const VIS_KEY = 'reunion:column-visibility';
-const SIZE_KEY = 'reunion:column-sizing';
+const SIZE_KEY = 'reunion:column-sizing:v2';
 
 const DEFAULT_SIZE: Record<Column['type'], number> = {
-    notes: 250,
-    asignaturas: 190,
-    subject_attention: 290,
-    estrategias: 260,
-    responsables: 160,
+    notes: 280,
+    asignaturas: 215,
+    subject_attention: 325,
+    estrategias: 295,
+    responsables: 185,
 };
 
 function loadVisibility(): Record<string, boolean> {
@@ -759,7 +759,7 @@ function StudentCell({ student, index }: { student: StudentRow; index: number })
                 {String(index + 1).padStart(2, '0')}
             </span>
 
-            <div className="bg-primary/10 border-primary/20 text-primary flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full border text-xs font-bold shadow-xs">
+            <div className="bg-primary/10 border-primary/20 text-primary flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full border text-xs font-bold shadow-xs">
                 {student.photo_url ? <img src={student.photo_url} alt={student.full_name} className="size-full object-cover" /> : initials}
             </div>
 
@@ -767,7 +767,7 @@ function StudentCell({ student, index }: { student: StudentRow; index: number })
                 <div className="flex items-center gap-1.5">
                     <Link
                         href={`/estudiantes/${student.id}`}
-                        className="text-primary group-hover/row:text-primary truncate text-xs leading-snug font-bold hover:underline"
+                        className="text-primary group-hover/row:text-primary truncate text-[13px] leading-snug font-bold hover:underline"
                         title="Ver ficha integral del estudiante"
                     >
                         {student.full_name}
@@ -994,8 +994,8 @@ export default function ReunionShow(props: ReunionProps) {
         const studentCol: ColumnDef<StudentRow> = {
             id: 'student',
             accessorKey: 'full_name',
-            size: 250,
-            minSize: 210,
+            size: 285,
+            minSize: 235,
             enableResizing: false,
             header: () => 'Estudiante',
             cell: ({ row }) => <StudentCell student={row.original} index={row.index} />,
@@ -1025,7 +1025,7 @@ export default function ReunionShow(props: ReunionProps) {
         onColumnSizingChange: setColumnSizing,
         columnResizeMode: 'onChange',
         getCoreRowModel: getCoreRowModel(),
-        defaultColumn: { minSize: 120, maxSize: 540 },
+        defaultColumn: { minSize: 130, maxSize: 640 },
     });
 
     const visibleCols = table.getVisibleLeafColumns();
@@ -1328,7 +1328,7 @@ export default function ReunionShow(props: ReunionProps) {
                         (isExpanded ? 'h-[calc(100vh-170px)]' : 'max-h-[72vh]')
                     }
                 >
-                    <table className="border-separate border-spacing-0 text-xs" style={{ tableLayout: 'fixed', width: table.getTotalSize() }}>
+                    <table className="border-separate border-spacing-0 text-[13px]" style={{ tableLayout: 'fixed', width: table.getTotalSize() }}>
                         <colgroup>
                             {visibleCols.map((col) => (
                                 <col key={col.id} style={{ width: col.getSize() }} />
@@ -1381,7 +1381,7 @@ export default function ReunionShow(props: ReunionProps) {
                                                     key={header.id}
                                                     colSpan={header.colSpan}
                                                     className={
-                                                        'border-border relative border-b p-2.5 text-left text-[11px] font-bold tracking-wide uppercase transition select-none ' +
+                                                        'border-border relative border-b p-3 text-left text-[11.5px] font-bold tracking-wide uppercase transition select-none ' +
                                                         (isStudent
                                                             ? 'bg-muted border-primary/25 text-primary sticky left-0 z-30 border-r-2 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.12)]'
                                                             : support
@@ -1430,7 +1430,7 @@ export default function ReunionShow(props: ReunionProps) {
                                             <td
                                                 key={cell.id}
                                                 className={
-                                                    'border-border border-b p-2 align-top text-xs transition ' +
+                                                    'border-border border-b p-2.5 align-top text-[13px] transition ' +
                                                     (isStudent
                                                         ? 'border-primary/25 sticky left-0 z-10 border-r-2 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.12)] ' +
                                                           (zebra ? 'bg-muted/90' : 'bg-card') +
