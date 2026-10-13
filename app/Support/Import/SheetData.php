@@ -3,6 +3,8 @@
 namespace App\Support\Import;
 
 use Carbon\CarbonImmutable;
+use DOMDocument;
+use DOMElement;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
@@ -27,6 +29,12 @@ class SheetData
     /** @return list<SheetData> */
     public static function load(string $path): array
     {
+        // Phidias (y otras plataformas) exportan una tabla HTML con extensión .xls.
+        $head = (string) file_get_contents($path, false, null, 0, 2048);
+        if (preg_match('/^\s*(<!doctype html|<html|<table|<meta)/i', ltrim($head, "\xEF\xBB\xBF"))) {
+            return [self::fromHtml((string) file_get_contents($path), 'Hoja 1')];
+        }
+
         $reader = IOFactory::createReaderForFile($path);
         $spreadsheet = $reader->load($path);
 
@@ -36,6 +44,57 @@ class SheetData
         }
 
         return $sheets;
+    }
+
+    /**
+     * Primera tabla del HTML. Solo se toman las celdas de primer nivel: las tablas anidadas
+     * (p. ej. "Historial de matrículas" de Phidias) quedan como texto dentro de su celda.
+     * "No hay datos" se trata como celda vacía.
+     */
+    private static function fromHtml(string $html, string $name): self
+    {
+        $dom = new DOMDocument;
+        $previous = libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NONET);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        $table = $dom->getElementsByTagName('table')->item(0);
+        $rows = [];
+
+        if ($table instanceof DOMElement) {
+            $trs = self::childElements($table, ['tr']);
+            foreach (self::childElements($table, ['thead', 'tbody', 'tfoot']) as $section) {
+                $trs = [...$trs, ...self::childElements($section, ['tr'])];
+            }
+
+            foreach ($trs as $i => $tr) {
+                foreach (self::childElements($tr, ['td', 'th']) as $j => $cell) {
+                    $text = trim((string) preg_replace('/\s+/u', ' ', $cell->textContent));
+                    if ($text !== '' && mb_strtolower($text) !== 'no hay datos') {
+                        $rows[$i + 1][$j + 1] = $text;
+                    }
+                }
+            }
+        }
+
+        return new self($name, $rows, []);
+    }
+
+    /**
+     * @param  list<string>  $tags
+     * @return list<DOMElement>
+     */
+    private static function childElements(DOMElement $parent, array $tags): array
+    {
+        $found = [];
+        foreach ($parent->childNodes as $node) {
+            if ($node instanceof DOMElement && in_array(strtolower($node->tagName), $tags, true)) {
+                $found[] = $node;
+            }
+        }
+
+        return $found;
     }
 
     private static function fromWorksheet(Worksheet $sheet): self

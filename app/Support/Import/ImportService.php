@@ -3,6 +3,7 @@
 namespace App\Support\Import;
 
 use App\Enums\ImportTemplateType;
+use App\Jobs\FetchPhidiasPhotos;
 use App\Models\Contribution;
 use App\Models\Enrollment;
 use App\Models\FollowUp;
@@ -22,6 +23,7 @@ class ImportService
     /** Plantillas que la pantalla de importación ofrece hoy. */
     public const SUPPORTED = [
         ImportTemplateType::CurrentFormat,
+        ImportTemplateType::PhidiasStudents,
         ImportTemplateType::StudentsEnrollments,
         ImportTemplateType::TeachingAssignments,
     ];
@@ -32,6 +34,7 @@ class ImportService
         return match ($type) {
             ImportTemplateType::CurrentFormat => new CurrentFormatImporter($year, $user, $options),
             ImportTemplateType::StudentsEnrollments => new StudentsImporter($year, $user, $options),
+            ImportTemplateType::PhidiasStudents => new PhidiasStudentsImporter($year, $user, $options),
             ImportTemplateType::TeachingAssignments => new TeachingAssignmentsImporter($year, $user, $options),
             default => throw new InvalidArgumentException("La plantilla {$type->value} todavía no se puede importar."),
         };
@@ -59,6 +62,12 @@ class ImportService
         $done = [];
 
         DB::transaction(function () use ($batch, &$done) {
+            $photos = 0;
+            foreach (array_keys($batch->error_report['photos'] ?? []) as $studentId) {
+                $photos += FetchPhidiasPhotos::removePhoto((int) $studentId) ? 1 : 0;
+            }
+            $done['Fotos de Phidias'] = $photos;
+
             $done['Aportes'] = Contribution::withTrashed()->where('import_batch_id', $batch->id)->forceDelete();
             $done['Estrategias'] = Strategy::withTrashed()->where('import_batch_id', $batch->id)->forceDelete();
 
@@ -66,9 +75,22 @@ class ImportService
             $undo = array_reverse($batch->error_report['undo'] ?? []);
 
             foreach ($undo as $change) {
-                if ($change['type'] === 'enrollment_moved') {
-                    Enrollment::whereKey($change['id'])->update(['group_id' => $change['previous'] ?? null]);
-                    $done['Cambios de grupo'] = ($done['Cambios de grupo'] ?? 0) + 1;
+                match ($change['type']) {
+                    'enrollment_moved' => Enrollment::whereKey($change['id'])->update(['group_id' => $change['previous'] ?? null]),
+                    'student_active' => Student::withTrashed()->whereKey($change['id'])->update(['active' => (bool) ($change['previous'] ?? 1)]),
+                    'student_code_set' => Student::withTrashed()->whereKey($change['id'])->update(['institutional_code' => null]),
+                    default => null,
+                };
+
+                $label = match ($change['type']) {
+                    'enrollment_moved' => 'Cambios de grupo',
+                    'student_active' => 'Cambios de estado',
+                    'student_code_set' => 'Códigos institucionales',
+                    default => null,
+                };
+
+                if ($label !== null) {
+                    $done[$label] = ($done[$label] ?? 0) + 1;
                 }
             }
 
