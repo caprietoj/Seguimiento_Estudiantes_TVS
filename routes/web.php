@@ -3,10 +3,12 @@
 use App\Http\Controllers\Admin\FollowUpController as AdminFollowUpController;
 use App\Http\Controllers\Admin\GradeLevelController as AdminGradeLevelController;
 use App\Http\Controllers\Admin\GroupController as AdminGroupController;
+use App\Http\Controllers\Admin\ImportController as AdminImportController;
 use App\Http\Controllers\Admin\SchoolYearController;
 use App\Http\Controllers\Admin\SectionController as AdminSectionController;
 use App\Http\Controllers\Admin\StudentController as AdminStudentController;
 use App\Http\Controllers\Admin\SubjectController as AdminSubjectController;
+use App\Http\Controllers\Admin\TeachingAssignmentController as AdminTeachingAssignmentController;
 use App\Http\Controllers\Auth\IntranetSsoController;
 use App\Http\Controllers\CommitmentController;
 use App\Http\Controllers\CommitteeDecisionController;
@@ -22,7 +24,6 @@ use App\Http\Controllers\StrategyController;
 use App\Http\Controllers\StrategyReviewController;
 use App\Http\Controllers\StudentController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/', function () {
     return auth()->check()
@@ -106,6 +107,18 @@ Route::middleware(['auth'])->group(function () {
         Route::get('asignaturas', [AdminSubjectController::class, 'index'])->name('asignaturas.index');
         Route::post('asignaturas', [AdminSubjectController::class, 'store'])->name('asignaturas.store');
         Route::put('asignaturas/{subject}', [AdminSubjectController::class, 'update'])->name('asignaturas.update');
+
+        Route::get('asignaciones', [AdminTeachingAssignmentController::class, 'index'])->name('asignaciones.index');
+        Route::post('asignaciones', [AdminTeachingAssignmentController::class, 'store'])->name('asignaciones.store');
+        Route::delete('asignaciones/{assignment}', [AdminTeachingAssignmentController::class, 'destroy'])->name('asignaciones.destroy');
+        Route::put('asignaciones/grupo/{group}/director', [AdminTeachingAssignmentController::class, 'director'])->name('asignaciones.director');
+
+        Route::get('importar', [AdminImportController::class, 'index'])->name('importar.index');
+        Route::post('importar', [AdminImportController::class, 'store'])->name('importar.store');
+        Route::get('importar/plantilla/{type}', [AdminImportController::class, 'template'])->name('importar.plantilla');
+        Route::post('importar/{batch}/confirmar', [AdminImportController::class, 'confirm'])->name('importar.confirmar');
+        Route::post('importar/{batch}/revertir', [AdminImportController::class, 'revert'])->name('importar.revertir');
+        Route::delete('importar/{batch}', [AdminImportController::class, 'destroy'])->name('importar.destroy');
     });
 });
 

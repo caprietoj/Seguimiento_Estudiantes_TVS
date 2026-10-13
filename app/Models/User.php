@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\LoginMethod;
+use App\Enums\RoleName;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
@@ -76,6 +78,19 @@ class User extends Authenticatable
     public function teachingGroups(): Builder
     {
         return Group::whereIn('id', $this->teachingAssignments()->pluck('group_id'));
+    }
+
+    /**
+     * Usuarios con un rol dado, tolerando que la intranet lo haya nombrado distinto
+     * (p. ej. "Docente" en vez de "profesor"). `User::role()` de spatie exige el nombre
+     * exacto y deja por fuera a los profesores que vienen de la intranet.
+     *
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
+    public function scopeWithRoleName(Builder $query, RoleName $role): Builder
+    {
+        return $query->whereHas('roles', fn ($q) => $q->whereIn(DB::raw('LOWER(TRIM(name))'), $role->aliases()));
     }
 
     public function isActive(): bool

@@ -30,12 +30,15 @@ class StudentController extends Controller
      * Pestaña "Ficha del estudiante" del menú superior: sin un estudiante elegido todavía,
      * entra al primero (por nombre) del primer grupo visible para el usuario.
      */
-    public function index(Request $request): RedirectResponse
+    public function index(Request $request): RedirectResponse|Response
     {
         $user = $request->user();
         $schoolYear = SchoolYear::where('is_active', true)->firstOrFail();
         $group = Scope::visibleGroups($user, $schoolYear->id)->first();
-        abort_if($group === null, 404, 'Tu usuario todavía no tiene grupos asignados.');
+
+        if ($group === null) {
+            return Inertia::render('reunion/sin-grupos');
+        }
 
         $student = $group->students()->orderBy('full_name')->first();
         abort_if($student === null, 404, 'El grupo no tiene estudiantes matriculados.');

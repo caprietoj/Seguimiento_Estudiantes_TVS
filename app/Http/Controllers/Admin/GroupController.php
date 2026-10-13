@@ -36,7 +36,7 @@ class GroupController extends Controller
             'schoolYears' => $schoolYears->map(fn (SchoolYear $y) => ['id' => $y->id, 'name' => $y->name])->values(),
             'selectedYearId' => $selectedYearId,
             'sections' => Section::orderBy('name')->get(['id', 'name']),
-            'directors' => User::role(RoleName::Profesor->value)
+            'directors' => User::withRoleName(RoleName::Profesor)
                 ->where('active', true)
                 ->orderBy('name')
                 ->get(['id', 'name'])

@@ -37,7 +37,12 @@ class Scope
      */
     private static function hasRole(User $user, RoleName $role): bool
     {
-        return $user->roles->contains(fn ($assignedRole) => $role->matches($assignedRole->name));
+        return $user->roles->pluck('name')->contains(fn (mixed $name) => is_string($name) && $role->matches($name));
+    }
+
+    public static function hasRoleName(User $user, RoleName $role): bool
+    {
+        return self::hasRole($user, $role);
     }
 
     public static function isDirector(User $user, Group $group): bool
