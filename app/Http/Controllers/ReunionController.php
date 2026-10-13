@@ -66,7 +66,7 @@ class ReunionController extends Controller
         $contributions = Contribution::query()
             ->whereIn('student_id', $studentIds)
             ->where('follow_up_id', $followUp->id)
-            ->with('author')
+            ->with('author.roles')
             ->get()
             ->groupBy(fn ($c) => $c->student_id.'|'.$c->field->value);
 
@@ -82,6 +82,22 @@ class ReunionController extends Controller
         $disciplinaryOpenByStudent = Scope::disciplinarySee($user, $group)
             ? DisciplinaryCase::query()->whereIn('student_id', $studentIds)->where('status', 'open')->get()->groupBy('student_id')
             : collect();
+
+        $responsibleStrategies = Strategy::query()
+            ->whereIn('student_id', $studentIds)
+            ->whereNotNull('responsible')->where('responsible', '!=', '')
+            ->get(['student_id', 'responsible'])
+            ->groupBy('student_id');
+        $responsibleCommitments = Commitment::query()
+            ->whereIn('student_id', $studentIds)
+            ->whereNotNull('responsible')->where('responsible', '!=', '')
+            ->get(['student_id', 'responsible'])
+            ->groupBy('student_id');
+        $responsiblesFor = fn (int $studentId) => $responsibleStrategies->get($studentId, collect())
+            ->pluck('responsible')
+            ->merge($responsibleCommitments->get($studentId, collect())->pluck('responsible'))
+            ->unique()
+            ->values();
 
         $areas = collect(ContributionField::supportAreas());
         $visibleAreas = $areas->filter(fn (ContributionField $f) => Scope::seesField($user, $group, $f))->values();
@@ -107,7 +123,7 @@ class ReunionController extends Controller
             return $role ? RoleName::labelFor($role) : '';
         };
 
-        $studentRows = $students->map(function ($student) use ($contributions, $individualStrategies, $lateByStudent, $disciplinaryOpenByStudent, $columns, $user, $group, $roleLabel, $groupSubjects) {
+        $studentRows = $students->map(function ($student) use ($contributions, $individualStrategies, $lateByStudent, $disciplinaryOpenByStudent, $columns, $user, $group, $roleLabel, $groupSubjects, $responsiblesFor) {
             $cells = [];
             foreach ($columns as $col) {
                 if ($col['type'] === 'notes') {
@@ -164,7 +180,7 @@ class ReunionController extends Controller
                         'can_write' => Scope::inScope($user, $group),
                     ];
                 } elseif ($col['type'] === 'responsables') {
-                    $cells[$col['key']] = $student->responsibles();
+                    $cells[$col['key']] = $responsiblesFor($student->id);
                 }
             }
 

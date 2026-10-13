@@ -21,6 +21,48 @@ use Illuminate\Support\Collection;
  */
 class Scope
 {
+    /**
+     * Caché por request de las asignaciones docentes. Sin esto, `teaches()` y
+     * `gradeWrite()` disparan un `exists` a `teaching_assignments` en cada llamada
+     * (una por celda/columna en la reunión de grupo), lo que produce cientos de
+     * consultas por página. En php-fpm los estáticos se reinician en cada request;
+     * `flush()` permite limpiarlos (pruebas, Octane o cambios de asignación).
+     *
+     * @var array<int, array<int, bool>> group_id => true por user_id
+     */
+    private static array $teachingGroupIds = [];
+
+    /** @var array<int, array<string, bool>> "group_id|subject_id" => true por user_id */
+    private static array $teachingSubjectKeys = [];
+
+    public static function flush(): void
+    {
+        self::$teachingGroupIds = [];
+        self::$teachingSubjectKeys = [];
+    }
+
+    /** @return array<int, bool> Ids de grupo donde el usuario tiene alguna asignación. */
+    private static function teachingGroupIds(User $user): array
+    {
+        return self::$teachingGroupIds[$user->id]
+            ??= TeachingAssignment::query()
+                ->where('user_id', $user->id)
+                ->pluck('group_id')
+                ->mapWithKeys(fn (mixed $id) => [(int) $id => true])
+                ->all();
+    }
+
+    /** @return array<string, bool> Pares "group_id|subject_id" que el usuario enseña. */
+    private static function teachingSubjectKeys(User $user): array
+    {
+        return self::$teachingSubjectKeys[$user->id]
+            ??= TeachingAssignment::query()
+                ->where('user_id', $user->id)
+                ->get(['group_id', 'subject_id'])
+                ->mapWithKeys(fn (TeachingAssignment $a) => [$a->group_id.'|'.$a->subject_id => true])
+                ->all();
+    }
+
     public static function isAdmin(User $user): bool
     {
         return self::hasRole($user, RoleName::Admin);
@@ -56,10 +98,7 @@ class Scope
             return false;
         }
 
-        return TeachingAssignment::query()
-            ->where('user_id', $user->id)
-            ->where('group_id', $group->id)
-            ->exists();
+        return isset(self::teachingGroupIds($user)[$group->id]);
     }
 
     /** EMC cuyo alcance cubre la sección del grupo: sin sección asignada ve todo el colegio. */
@@ -186,11 +225,7 @@ class Scope
             return true;
         }
 
-        return TeachingAssignment::query()
-            ->where('user_id', $user->id)
-            ->where('group_id', $group->id)
-            ->where('subject_id', $subject->id)
-            ->exists();
+        return isset(self::teachingSubjectKeys($user)[$group->id.'|'.$subject->id]);
     }
 
     /** @return Collection<int, Group> Grupos que el usuario puede ver, del año escolar dado. */
