@@ -24,11 +24,14 @@ class GroupSeeder extends Seeder
 {
     /**
      * Cada grupo: código, grado (valor de `grade_levels`), prefijo de la sección
-     * y nombre del director(a) de grupo tal como aparece en el listado del colegio.
+     * y nombre del director(a) de grupo tal como aparece en el listado del colegio
+     * (`null` si aún no tiene director asignado).
      *
-     * @var list<array{code: string, grade: int, section: string, director: string}>
+     * @var list<array{code: string, grade: int, section: string, director: ?string}>
      */
     private const GROUPS = [
+        ['code' => 'PKA',          'grade' => 0,  'section' => 'PEP', 'director' => null],
+        ['code' => 'KA',           'grade' => 0,  'section' => 'PEP', 'director' => null],
         ['code' => 'Transición A', 'grade' => 0,  'section' => 'PEP', 'director' => 'Hurtado Veloz, Paola Estefanía'],
         ['code' => '1A',           'grade' => 1,  'section' => 'PEP', 'director' => 'CANO VALDES, GISELA AMALIA'],
         ['code' => '2A',           'grade' => 2,  'section' => 'PEP', 'director' => 'PEÑARANDA SUAREZ, CARMEN JULIANA'],
@@ -69,14 +72,21 @@ class GroupSeeder extends Seeder
                 throw new RuntimeException("No se encontró la sección '{$spec['section']}' para el grupo {$spec['code']}.");
             }
 
-            $director = $this->findDirector($spec['director']);
+            $directorId = null;
+            $directorName = 'Sin asignar';
+
+            if ($spec['director'] !== null) {
+                $director = $this->findDirector($spec['director']);
+                $directorId = $director->id;
+                $directorName = $director->name;
+            }
 
             Group::query()->updateOrCreate(
                 ['code' => $spec['code'], 'school_year_id' => $schoolYear->id],
-                ['grade' => $spec['grade'], 'section_id' => $section->id, 'director_id' => $director->id],
+                ['grade' => $spec['grade'], 'section_id' => $section->id, 'director_id' => $directorId],
             );
 
-            $this->command->info("Grupo {$spec['code']} ({$section->name}) → director(a): {$director->name}");
+            $this->command->info("Grupo {$spec['code']} ({$section->name}) → director(a): {$directorName}");
         }
     }
 
