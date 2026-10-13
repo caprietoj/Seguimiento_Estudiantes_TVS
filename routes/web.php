@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\SchoolYearController;
 use App\Http\Controllers\Admin\SectionController as AdminSectionController;
 use App\Http\Controllers\Admin\StudentController as AdminStudentController;
 use App\Http\Controllers\Admin\SubjectController as AdminSubjectController;
+use App\Http\Controllers\Auth\IntranetSsoController;
 use App\Http\Controllers\CommitmentController;
 use App\Http\Controllers\CommitteeDecisionController;
 use App\Http\Controllers\CompromisosController;
@@ -24,8 +25,15 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('welcome');
+    return auth()->check()
+        ? to_route('dashboard')
+        : to_route('login');
 })->name('home');
+
+// Inicio de sesión único (SSO) desde la intranet.
+Route::get('sso/intranet', IntranetSsoController::class)
+    ->middleware('throttle:60,1')
+    ->name('sso.intranet');
 
 Route::middleware(['auth'])->group(function () {
     Route::redirect('dashboard', '/reunion')->name('dashboard');

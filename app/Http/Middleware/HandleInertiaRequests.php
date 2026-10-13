@@ -41,7 +41,7 @@ class HandleInertiaRequests extends Middleware
 
         $user = $request->user();
         $roleLabels = $user
-            ? $user->getRoleNames()->map(fn (string $role) => RoleName::from($role)->label())->values()
+            ? $user->getRoleNames()->map(fn (string $role) => RoleName::labelFor($role))->values()
             : [];
 
         return array_merge(parent::share($request), [

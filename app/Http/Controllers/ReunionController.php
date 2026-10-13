@@ -104,7 +104,7 @@ class ReunionController extends Controller
             }
             $role = $author->getRoleNames()->first();
 
-            return $role ? RoleName::from($role)->label() : '';
+            return $role ? RoleName::labelFor($role) : '';
         };
 
         $studentRows = $students->map(function ($student) use ($contributions, $individualStrategies, $lateByStudent, $disciplinaryOpenByStudent, $columns, $user, $group, $roleLabel, $groupSubjects) {

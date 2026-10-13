@@ -16,6 +16,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | SSO desde la intranet
+    |--------------------------------------------------------------------------
+    |
+    | Secreto compartido (HMAC-SHA256) para aceptar el inicio de sesión único
+    | proveniente de intranet.tvs.edu.co. Debe coincidir con el
+    | SEGUIMIENTO_SSO_SECRET configurado en la intranet.
+    |
+    */
+    'intranet_sso_secret' => env('INTRANET_SSO_SECRET'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Alcance de EMC por sección
     |--------------------------------------------------------------------------
     |

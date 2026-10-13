@@ -23,12 +23,21 @@ class Scope
 {
     public static function isAdmin(User $user): bool
     {
-        return $user->hasRole(RoleName::Admin->value);
+        return self::hasRole($user, RoleName::Admin);
     }
 
     public static function isPsicologia(User $user): bool
     {
-        return $user->hasRole(RoleName::Psicologia->value);
+        return self::hasRole($user, RoleName::Psicologia);
+    }
+
+    /**
+     * Compara el rol asignado tolerando que el rol se haya renombrado en la tabla
+     * compartida `roles` (p. ej. "psicologia" → "Departamento de Apoyo").
+     */
+    private static function hasRole(User $user, RoleName $role): bool
+    {
+        return $user->roles->contains(fn ($assignedRole) => $role->matches($assignedRole->name));
     }
 
     public static function isDirector(User $user, Group $group): bool
@@ -38,7 +47,7 @@ class Scope
 
     public static function teaches(User $user, Group $group): bool
     {
-        if (! $user->hasRole(RoleName::Profesor->value)) {
+        if (! self::hasRole($user, RoleName::Profesor)) {
             return false;
         }
 
@@ -51,7 +60,7 @@ class Scope
     /** EMC cuyo alcance cubre la sección del grupo: sin sección asignada ve todo el colegio. */
     public static function emcInSection(User $user, Group $group): bool
     {
-        if (! $user->hasRole(RoleName::Emc->value)) {
+        if (! self::hasRole($user, RoleName::Emc)) {
             return false;
         }
 
