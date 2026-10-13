@@ -36,7 +36,12 @@ class GroupController extends Controller
             'schoolYears' => $schoolYears->map(fn (SchoolYear $y) => ['id' => $y->id, 'name' => $y->name])->values(),
             'selectedYearId' => $selectedYearId,
             'sections' => Section::orderBy('name')->get(['id', 'name']),
-            'directors' => User::role(RoleName::Profesor->value)->orderBy('name')->get(['id', 'name']),
+            'directors' => User::role(RoleName::Profesor->value)
+                ->where('active', true)
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn (User $director) => ['id' => $director->id, 'name' => mb_strtoupper($director->name)])
+                ->values(),
             'gradeLevels' => collect(GradeLevel::activeOptions())->map(fn (string $name, int $value) => ['value' => $value, 'label' => $name])->values(),
             'groups' => $groups->map(fn (Group $g) => [
                 'id' => $g->id,
@@ -46,7 +51,7 @@ class GroupController extends Controller
                 'section_id' => $g->section_id,
                 'section_name' => $g->section->name,
                 'director_id' => $g->director_id,
-                'director_name' => $g->director?->name,
+                'director_name' => $g->director ? mb_strtoupper($g->director->name) : null,
                 'students_count' => $g->enrollments_count,
             ])->values(),
         ]);
