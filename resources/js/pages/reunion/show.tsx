@@ -1042,7 +1042,7 @@ export default function ReunionShow(props: ReunionProps) {
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex flex-wrap items-center gap-3">
                         <div className="flex items-center gap-2">
-                            <span className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-lg text-sm font-bold">
+                            <span className="bg-primary/10 text-primary flex h-9 min-w-9 shrink-0 items-center justify-center rounded-lg px-2 text-sm font-bold whitespace-nowrap">
                                 {group.code}
                             </span>
                             <div>
