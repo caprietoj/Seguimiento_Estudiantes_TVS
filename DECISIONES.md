@@ -141,6 +141,25 @@ construir. Se actualiza en cada fase.
 21. **Retirados en Phidias:** si ya existen en la app quedan inactivos (revertible); si no
     existen, no se crean.
 
+## Ficha en PDF, respaldos y grados (13 oct 2026)
+
+22. **PDF con Public Sans incrustada y sin sección de acudientes.** Se rediseñó la ficha
+    (foto de 116 pt, indicadores sin duplicar, secciones vacías en una línea). La fuente de
+    la app se incluye como TTF en `resources/fonts/pdf/` (OFL) porque DomPDF no lee woff;
+    con subconjuntos el PDF pasó de ~1,3 MB a ~100 KB. La antigua sección «Padres de familia
+    y acudientes» mostraba en realidad los responsables de estrategias/compromisos: se quitó.
+
+23. **Respaldos en formato propio y solo de tablas del seguimiento.** No se usa mysqldump
+    para respaldar/restaurar desde la pantalla: un .zip con JSON por tabla permite restaurar
+    todo dentro de una transacción, funciona igual en Docker y XAMPP y garantiza que nunca
+    se toquen las tablas compartidas con la intranet (usuarios, roles, permisos, sesiones).
+    Cada restauración crea antes un respaldo «previo a restauración».
+
+24. **Grados por valor de catálogo, no por número.** Desde que `GradeLevelSeeder` numera
+    desde Prekinder (10.° = 12), el número de un código de grupo ("10A") se traduce al valor
+    del catálogo por el nombre del grado ("10.°"); los importadores funcionan con la
+    numeración antigua y con la nueva.
+
 ## Pendiente de confirmar con el colegio (no bloquea el desarrollo)
 
 - Si además de las 6 asignaciones docentes de ejemplo (Historia, Matemáticas AA y

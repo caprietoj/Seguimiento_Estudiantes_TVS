@@ -1,9 +1,9 @@
 # Contexto del proyecto — para quien retome este trabajo
 
-Este archivo es un resumen para otro agente (humano o IA) que no haya visto la
-conversación original. Léelo primero; para el detalle completo del encargo original
-lee también `README.md` (cómo correr y desplegar) y `DECISIONES.md` (qué se decidió
-cuando el encargo no era explícito, y por qué).
+Este archivo es un resumen para otro agente (humano o IA) que no haya visto las
+conversaciones anteriores. Léelo primero; para el detalle lee también `README.md` (cómo
+correr y desplegar) y `DECISIONES.md` (qué se decidió cuando el encargo no era explícito,
+y por qué). Última actualización: 13 de octubre de 2026.
 
 ## Qué es esta aplicación
 
@@ -15,21 +15,21 @@ y cada profesor/coordinador/psicóloga aporta lo suyo.
 Esta aplicación **reemplaza ese Excel**. La idea central: cada estudiante tiene una
 **ficha** que se alimenta durante todo el año escolar (no solo en la reunión), y la
 "reunión de seguimiento" es simplemente el momento en que varias personas aportan al
-mismo tiempo sobre los estudiantes de un grupo.
+mismo tiempo sobre los estudiantes de un grupo. Está **en producción** en el colegio.
 
-Dos archivos de referencia viven en la raíz del repo y **no se deben borrar**:
+Archivos de referencia (están en `.gitignore`, **no** se suben a GitHub; pídeselos al
+usuario si los necesitas):
 
-- `Seguimiento de Estudiantes.html` — boceto interactivo (HTML + localStorage) ya
-  aprobado por el colegio. Es la referencia visual y de comportamiento más confiable:
-  cuando haya duda sobre cómo debe verse o comportarse algo, ábrelo en un navegador
-  (selector "Viendo como" para probar los distintos roles) antes de inventar un diseño.
-- `Seguimiento 10A-2.xlsx` — el Excel real que usa el colegio hoy. Es el formato que
-  el asistente de migración (Fase 5, **sin construir todavía**) debe poder leer.
+- `Seguimiento de Estudiantes.html` — boceto interactivo (HTML + localStorage) aprobado
+  por el colegio. Es la referencia visual y de comportamiento más confiable: ábrelo en un
+  navegador (selector "Viendo como" para probar roles) antes de inventar un diseño.
+- `Seguimiento 10A-2.xlsx` — el Excel real "Seguimiento y acuerdos". Ojo: la copia que
+  compartió el colegio trae la columna «Estudiante» **vacía** (se anonimizó).
+- `exported.xls` — export de estudiantes de **Phidias** (la plataforma académica del
+  colegio). Es una tabla HTML con extensión .xls, ~56 columnas.
 
-El encargo original completo (el prompt que generó este proyecto, en español, ~14
-secciones) no está en el repo como archivo; si lo necesitas textualmente, pídeselo a
-quien te haya puesto a trabajar en esto. Lo esencial de ese encargo está resumido
-abajo y en `DECISIONES.md`.
+El encargo original completo (~14 secciones, en español) no está en el repo; lo esencial
+está resumido abajo y en `DECISIONES.md`.
 
 ## Quiénes usan la aplicación (roles)
 
@@ -42,310 +42,255 @@ Cuatro roles (`spatie/laravel-permission`, ver `app/Enums/RoleName.php`):
 | `psicologia` | Dpto. de apoyo. Ve todo, escribe las notas clínicas. |
 | `emc` | Coordinadores. Ven y editan casi todo (salvo notas clínicas, configurable). |
 
-**La "dirección de grupo" NO es un rol**: es una asignación (`groups.director_id`
-apunta a un `users.id`). Un profesor director de 10A tiene permisos extra, pero solo
-en 10A. Un usuario puede tener varios roles a la vez (sus permisos se suman).
+**Usuarios y roles vienen de la intranet** (intranet.tvs.edu.co). Las tablas `users`,
+`roles` y relacionadas se consideran **compartidas con la intranet**: la app no tiene
+pantalla de usuarios y ningún respaldo/restauración las toca. El nombre de un rol puede
+venir distinto de la intranet ("Docente", "Departamento de Apoyo"…), por eso:
 
-Toda la lógica de "quién puede ver/escribir qué" está centralizada en **una sola
-clase**: `app/Support/Scope.php`. Tiene métodos estáticos como `Scope::inScope($user,
-$group)`, `Scope::clinicalSee(...)`, `Scope::writesField(...)`, etc. **Cualquier
-controlador o Policy nueva debe llamar a `Scope::`, nunca reinventar la regla.** Esta
-clase es la traducción fiel del objeto `P` del boceto HTML (sección "Permisos" del
-archivo `.html`), adaptado a los 4 roles reales. Si cambias una regla de permisos,
-cámbiala ahí y en ningún otro lado.
+- `RoleName::matches()` / `RoleName::aliases()` reconocen los alias conocidos.
+- Para listar usuarios por rol usa **`User::withRoleName(RoleName::Profesor)`**, nunca
+  `User::role('profesor')` de spatie (exige el nombre exacto y deja fuera a los docentes
+  de la intranet).
+
+**La "dirección de grupo" NO es un rol**: es una asignación (`groups.director_id`).
+
+**Qué ve un profesor:** solo los grupos donde es director(a) o tiene una asignación
+docente (`teaching_assignments`, que se gestiona en Administración · Asignaciones o se
+importa). Sin ninguna, ve la pantalla `reunion/sin-grupos`. Un docente de 10A que intente
+abrir un estudiante, la reunión o el PDF de otro grupo recibe 403.
+
+Toda la lógica de "quién puede ver/escribir qué" está centralizada en
+**`app/Support/Scope.php`** (`Scope::inScope`, `clinicalSee`, `writesField`…). **Cualquier
+controlador o Policy nueva debe llamar a `Scope::`, nunca reinventar la regla.** `Scope`
+memoiza por request las asignaciones docentes (`Scope::flush()` se llama al terminar cada
+request, ver `AppServiceProvider`); si cambias asignaciones dentro de un mismo request y
+vuelves a consultar permisos, llama `Scope::flush()`.
+
+### Inicio de sesión
+
+- Login institucional propio (`resources/js/pages/auth/login.tsx`), **sin registro
+  público** (se quitaron la ruta y la vista de registro). Límite de 5 intentos.
+- **SSO desde la intranet**: `GET /sso/intranet?token=…` (`IntranetSsoController`). La
+  intranet firma con HMAC-SHA256 (`INTRANET_SSO_SECRET`) un payload con `uid`, `exp`,
+  `nonce` y opcionalmente `email`; se valida firma, vigencia y que el nonce no se reuse.
+  El ADMIN entra a `/admin`, el resto a `/reunion`.
+- `php artisan app:crear-admin correo` crea el primer ADMIN por consola.
 
 ## Stack
 
-- Laravel 12 (PHP 8.3+), MySQL 8 (`utf8mb4_unicode_ci`).
-- Inertia.js + React 19 + TypeScript + Vite, Tailwind CSS v4, componentes shadcn/Radix
-  ya instalados en `resources/js/components/ui/`.
-- `spatie/laravel-permission` (roles) + Policies de Laravel + `App\Support\Scope`
-  (reglas de alcance, ver arriba).
-- `phpoffice/phpspreadsheet` (vía `maatwebsite/excel`): lo usa el importador de la Fase 5
-  (`app/Support/Import/`) para leer los Excel y generar las plantillas.
-- `barryvdh/laravel-dompdf` (ya en uso: exportar la ficha a PDF).
-- Pest (pruebas), Pint (estilo), Larastan/PHPStan nivel 6 (análisis estático),
-  ESLint + Prettier (frontend).
-- Docker: `Dockerfile` (multi-etapa, `serversideup/php:8.3-fpm-nginx`),
-  `docker-compose.yml` (dev) y `docker-compose.prod.yml` (prod) ya escritos, pero
-  **nunca probados con Docker real** — esta máquina de desarrollo no tenía Docker
-  instalado. Si vas a tocar algo de Docker, pruébalo de verdad antes de darlo por
-  bueno.
+- Laravel 12 (PHP 8.3), MySQL 8 en producción. Inertia.js + React 19 + TypeScript +
+  Vite, Tailwind CSS v4, componentes shadcn/Radix en `resources/js/components/ui/`.
+- `spatie/laravel-permission` + Policies + `App\Support\Scope`.
+- `phpoffice/phpspreadsheet` (vía `maatwebsite/excel`): importadores y plantillas.
+- `barryvdh/laravel-dompdf`: ficha en PDF, con Public Sans incrustada.
+- Cola `database` (`QUEUE_CONNECTION=database`): la usan las fotos de Phidias.
+- Pest, Pint, Larastan nivel 6 (sin baseline), ESLint + Prettier.
+- Docker: `Dockerfile` (`serversideup/php:8.3-fpm-nginx`, incluye cliente MySQL y zip),
+  `docker-compose.prod.yml` con contenedores `app`, `queue` y `scheduler`.
 
-## Cómo correr esto ahora mismo (desarrollo local sin Docker)
-
-Este entorno usa XAMPP (MySQL en `127.0.0.1:3306`, usuario `root` sin contraseña,
-base de datos `seguimiento_estudiantes`, ya creada).
+## Cómo correr esto (desarrollo local)
 
 ```bash
 composer install
 npm install
-php artisan migrate --seed   # o migrate:fresh --seed para reiniciar todo
-composer run dev             # levanta: php artisan serve (puerto 8000) + vite (5173) + cola + logs
+php artisan migrate --seed   # datos ficticios (DemoDataSeeder); migrate:fresh --seed para reiniciar
+composer run dev             # serve (8000) + vite (5173) + cola + logs
 ```
 
-Abre `http://127.0.0.1:8000`. Usuarios de prueba (contraseña `password` para todos,
-ver `database/seeders/DemoDataSeeder.php`):
+Usuarios de prueba (contraseña `password`): `admin@tvs.edu.co` (ADMIN),
+`andres.castano@tvs.edu.co` (profesor, director de 10A), `diana.rios@tvs.edu.co`
+(Matemáticas en 10A y 9B), `laura.restrepo@tvs.edu.co` (Inglés/Francés),
+`catalina.mejia@tvs.edu.co` (Psicología), `felipe.uribe@tvs.edu.co` (EMC todo el
+colegio), `natalia.serna@tvs.edu.co` (EMC solo DP).
 
-| Correo | Rol |
-|---|---|
-| `admin@tvs.edu.co` | ADMIN |
-| `andres.castano@tvs.edu.co` | Profesor, director de 10A |
-| `diana.rios@tvs.edu.co` | Profesora (Matemáticas, 10A y 9B) |
-| `laura.restrepo@tvs.edu.co` | Profesora (Inglés y Francés, 10A y 9B) |
-| `catalina.mejia@tvs.edu.co` | Psicología |
-| `felipe.uribe@tvs.edu.co` | EMC, sin sección (ve todo el colegio) |
-| `natalia.serna@tvs.edu.co` | EMC, limitada a la sección DP |
-
-Antes de dar por terminado cualquier cambio, corre:
+Seeders con **datos reales del colegio** (no están en `DatabaseSeeder`, se corren a mano en
+producción, son idempotentes):
 
 ```bash
-./vendor/bin/pint --test        # estilo PHP
-./vendor/bin/phpstan analyse    # análisis estático — debe dar 0 errores, sin baseline
-./vendor/bin/pest               # pruebas
-npm run lint                    # ESLint
-npm run format:check            # Prettier
-npm run build                   # confirma que el frontend compila
+php artisan db:seed --class=GradeLevelSeeder   # catálogo de grados real (ver «Grados» abajo)
+php artisan db:seed --class=GroupSeeder        # grupos reales del año activo con su director
 ```
 
-**Larastan corre sin `phpstan-baseline.neon`** (se eliminó a propósito). Si una
-relación de Eloquent nueva causa errores en cascada ("Access to an undefined
-property..."), casi siempre es porque le falta el docblock genérico
-(`@return HasMany<Modelo, $this>`) o porque el modelo usa `protected function
-casts(): array` en vez de `protected $casts = [...]` (esta versión de Larastan NO
-infiere bien los casts declarados como método — usa siempre la forma de propiedad).
-Ver el primer punto de la sección "Fase 1" en `DECISIONES.md` para el detalle de este
-hallazgo.
+Antes de dar por terminado cualquier cambio:
 
-El repo vive en GitHub (`caprietoj/Seguimiento_Estudiantes_TVS`). La carpeta `tests/`
-está en `.gitignore` a propósito (el CI la salta si no existe); las pruebas se corren
-localmente.
+```bash
+./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && ./vendor/bin/pest
+npm run lint && npm run format:check && npm run build
+```
 
-## Qué está construido y qué falta
+**Pruebas:** la carpeta `tests/` está en `.gitignore` a propósito (el CI la salta si no
+existe), así que **las pruebas no están en GitHub**; existen en la copia de trabajo de
+quien las escribió. Hay pruebas Pest de: importador del formato actual, Phidias,
+estudiantes/asignaciones, que un profesor solo ve su grupo, PDF y respaldos (25 pruebas).
+Usan SQLite en memoria; `tests/TestCase.php` apunta las páginas de Inertia a
+`resources/js/pages` (minúscula).
 
-El encargo original se dividía en 6 fases. Estado real a la fecha:
+**Larastan sin baseline:** si una relación nueva da errores en cascada, falta el docblock
+genérico (`@return HasMany<Modelo, $this>`) o el modelo usa `casts()` como método — usa
+siempre `protected $casts = [...]` (ver `DECISIONES.md`, Fase 1).
 
-### ✅ Fase 1 — Base
-Migraciones, modelos (con genéricos de Eloquent completos), Enums de PHP, factories,
-seeders con datos ficticios, Docker (sin probar), CI (`.github/workflows/ci.yml` y
-`release.yml`).
+**Composer en entornos sin acceso a la API de GitHub:** si `composer install` falla con
+"Could not authenticate against github.com", usa `--prefer-source`.
 
-### ⚠️ Fase 2 — Usuarios y permisos (parcial)
-Lo que SÍ existe: roles con spatie, `App\Support\Scope` con todas las reglas de la
-matriz de permisos, Policies (`GroupPolicy`, `StudentPolicy`) que delegan en `Scope`.
-Login institucional TVS sin registro público y SSO desde la intranet
-(`IntranetSsoController`). Los usuarios y roles vienen de la intranet: un rol se
-reconoce por sus alias (`RoleName::aliases()`, p. ej. "Docente" = profesor). Para
-listar usuarios por rol usa `User::withRoleName(RoleName::Profesor)`, **no**
-`User::role('profesor')` de spatie (exige el nombre exacto y deja por fuera a los
-docentes de la intranet).
+## Qué está construido
 
-Lo que **falta** de esta fase:
-- No hay cambio de contraseña obligatorio en el primer ingreso
-  (`users.must_change_password` ya existe en la base de datos, pero nada en el
-  frontend/middleware lo hace cumplir todavía).
-- No hay pruebas Pest de la matriz de permisos (el encargo las pide explícitamente,
-  "para cada celda de esta matriz"). Las pruebas que existen hoy son las que trae el
-  starter kit (login, registro, etc.), no las de `Scope`.
-- Rate limiting de login: ya cumple el encargo tal cual (`LoginRequest::
-  ensureIsNotRateLimited()` usa `RateLimiter::tooManyAttempts($key, 5)` — 5 intentos).
-  No hace falta tocarlo.
-
-### ✅ Fase 3 — Vistas principales
-Las tres vistas base del boceto, con sus controladores, construidas y **probadas en
-el navegador** (sin errores de consola, con datos reales):
-
+### Vistas principales
 - **Reunión de grupo** (`/reunion`, `/reunion/{group}/{followUpId}`) —
-  `app/Http/Controllers/ReunionController.php` +
-  `resources/js/pages/reunion/show.tsx`.
-- **Ficha del estudiante** (`/estudiantes`, `/estudiantes/{student}`) —
-  `app/Http/Controllers/StudentController.php` +
-  `resources/js/pages/estudiantes/show.tsx`. Incluye exportar a PDF
-  (`/estudiantes/{student}/pdf`, plantilla `resources/views/pdf/ficha.blade.php`, tamaño carta,
-  tipografía Public Sans incrustada desde `resources/fonts/pdf/` (licencia OFL; DomPDF guarda su
-  caché en `storage/fonts`), foto grande del estudiante, indicadores, secciones numeradas que se
-  compactan cuando están vacías, firmas y aviso legal; solo incluye lo que el perfil de quien
-  exporta puede ver y lo dice al final. El archivo se descarga como
-  "Ficha de seguimiento - Nombre - Grupo - Año.pdf") y foto de perfil (`app/Http/Controllers/PhotoController.php`,
-  recorte cuadrado con GD, servida por ruta autenticada — nunca pública).
-- **Compromisos** (`/compromisos`) — `app/Http/Controllers/CompromisosController.php`
-  + `resources/js/pages/compromisos/index.tsx`.
+  `ReunionController` + `pages/reunion/show.tsx`. Cuadrícula por estudiante con
+  fortalezas, aspectos de mejora, asignaturas a tener en cuenta, estrategias,
+  responsables, Dpto. de apoyo y Observación. Consultas optimizadas (sin N+1).
+- **Ficha del estudiante** (`/estudiantes`, `/estudiantes/{student}?anio=&grupo=`) —
+  `StudentController` + `pages/estudiantes/show.tsx`. Selector de año, grupo y
+  estudiante para navegar entre fichas (solo grupos visibles y con estudiantes).
+  Foto (`PhotoController`, recorte cuadrado 480 px vía `App\Support\StudentPhoto`,
+  servida por ruta autenticada).
+- **Ficha en PDF** (`/estudiantes/{student}/pdf`, `resources/views/pdf/ficha.blade.php`):
+  carta, Public Sans incrustada desde `resources/fonts/pdf/` (licencia OFL; DomPDF cachea en
+  `storage/fonts`), foto grande, indicadores, secciones numeradas que se compactan si están
+  vacías, firmas y aviso legal (Ley 1581/2012). Solo incluye lo que el perfil de quien
+  exporta puede ver y lo indica al final. Se descarga como
+  **"Ficha de seguimiento - Nombre - Grupo - Año.pdf"** (con respaldo ASCII). No hay
+  sección de acudientes: la app no guarda acudientes.
+- **Compromisos** (`/compromisos`) — `CompromisosController` + `pages/compromisos/index.tsx`.
 
-Controladores de apoyo para las acciones dentro de esas vistas (crear/borrar aportes,
-estrategias, compromisos, apoyos externos, notas de desempeño, decisiones de comité,
-casos disciplinarios): `ContributionController`, `StrategyController`,
-`StrategyReviewController`, `CommitmentController`, `ExternalSupportController`,
-`GradeController`, `CommitteeDecisionController`, `DisciplinaryCaseController`,
-`GroupMeetingController`.
+Layout institucional en `resources/js/layouts/seguimiento-layout.tsx`, colores en
+`resources/css/app.css`. **Sin modo oscuro a propósito** — no lo reactives.
 
-El layout institucional (barra azul/roja, pestañas, sin modo oscuro) está en
-`resources/js/layouts/seguimiento-layout.tsx`. Los colores/tipografías
-institucionales están en `resources/css/app.css` (tokens `--primary`, `--brand-red`,
-`--good`/`--warn`/`--crit`, fuentes Bricolage Grotesque / Public Sans / IBM Plex
-Mono). **El modo oscuro está deshabilitado a propósito**
-(`resources/js/hooks/use-appearance.tsx` nunca aplica la clase `dark`) porque el
-encargo pide "fondo blanco, sin modo oscuro" — no lo reactives.
+### Administración (`/admin`, solo ADMIN: `Gate::define('admin')`, middleware `can:admin`)
+Pestañas en `resources/js/components/admin-nav.tsx`:
 
-### ⚠️ Fase 4 — Administración (parcial)
-Existe (todo bajo `/admin`, protegido por `Gate::define('admin', ...)` en
-`AppServiceProvider`, middleware `can:admin`):
+- **Años escolares** (`/admin/anios`) — crear (genera 6 seguimientos), activar, solo-lectura.
+- **Periodo y seguimiento** (`/admin/seguimientos`).
+- **Secciones** (`/admin/secciones`) — PEP, PAI, DP.
+- **Grados** (`/admin/grados`) — catálogo `grade_levels`, fuente única de los grados.
+- **Grupos** (`/admin/grupos`) — sección y director (lista solo profesores activos,
+  nombres en mayúsculas).
+- **Estudiantes** (`/admin/estudiantes`).
+- **Asignaturas** (`/admin/asignaturas`).
+- **Asignaciones** (`/admin/asignaciones`, `TeachingAssignmentController`) — profesor →
+  grupo → asignaturas y dirección de grupo, por año; avisa qué profesores no tienen grupo.
+- **Importar** (`/admin/importar`) — ver abajo.
+- **Respaldos** (`/admin/respaldos`) — ver abajo.
 
-- **Años escolares** (`/admin/anios`) — crear uno genera automáticamente sus 6
-  seguimientos (3 periodos × 2 seguimientos, configurable en
-  `config('seguimiento.periodos')`); activar/marcar solo-lectura.
-- **Secciones** (`/admin/secciones`) — crear/editar/eliminar (bloquea el borrado si
-  hay grupos usando la sección).
-- **Grados** (`/admin/grados`) — catálogo `grade_levels` (Preescolar = 0 a 11.°,
-  nace sembrado en la migración): crear, renombrar, activar/desactivar y eliminar
-  (bloqueado si lo usan grupos o `grade_subject`). Es la fuente única de los grados:
-  grupos y asignaturas leen de ahí (no de `config`), y las etiquetas de la ficha/PDF
-  salen del catálogo.
-- **Grupos** (`/admin/grupos`) — crear, editar sección/director, por año escolar.
-- **Asignaturas** (`/admin/asignaturas`) — crear/editar, con los grados en los que
-  aplica (`grade_subject`).
-- **Estudiantes** (`/admin/estudiantes`) — crear estudiantes con o sin matrícula inicial,
-  filtrar por año escolar/grupo/estado/búsqueda, cambiar o quitar grupo directamente por año,
-  editar datos básicos, activar/desactivar, y registrar en `AuditLog`.
-- **Periodo y seguimiento** (`/admin/seguimientos`) — listar seguimientos por año escolar
-  con conteos de reuniones de grupo, aportes y estrategias vinculadas; crear seguimientos
-  manuales o autogenerar los 6 seguimientos por defecto (3 periodos × 2 seguimientos); editar
-  número/periodo; y eliminar con salvaguarda (bloquea el borrado si ya tiene datos asociados).
-  Registra todas las acciones administrativas en `AuditLog`. Además, la ficha del estudiante
-  ahora expone el selector de periodo/seguimiento para vincular aportes al seguimiento activo.
-- **Asignaciones** (`/admin/asignaciones`) — profesor → grupo → asignaturas y dirección de
-  grupo, por año escolar; avisa qué profesores no tienen grupo (no ven ningún estudiante).
-  Es lo que define qué ve cada docente: `Scope::inScope` solo le abre los grupos donde
-  tiene asignación o es director(a). Sin grupo, la reunión y la ficha muestran
-  `reunion/sin-grupos` (no un 404).
-- **Importar** (`/admin/importar`) — ver Fase 5.
-- **Respaldos** (`/admin/respaldos`, `Admin\BackupController` + `App\Support\Backup\BackupService`):
-  crear, descargar, subir, restaurar y eliminar. El respaldo es un .zip propio (manifiesto +
-  una línea JSON por fila de cada tabla de `BackupService::TABLES` + fotos), hecho en PHP (no
-  depende de mysqldump). **Solo las tablas del seguimiento**: usuarios, roles, permisos y
-  sesiones se comparten con la intranet y nunca se respaldan ni se pisan. La restauración
-  exige escribir RESTAURAR, hace antes un respaldo «previo a restauración», reemplaza todo en
-  una sola transacción (llaves foráneas apagadas mientras tanto) y rechaza respaldos de una
-  versión más nueva (migraciones que esta instalación no tiene). `app:respaldar-base-datos`
-  (programado 02:00) genera el mismo .zip y borra los automáticos de más de 14 días; los
-  `.sql.gz` del formato anterior se listan solo para descargar.
+### Grados: OJO con la numeración
+`groups.grade` y `grade_subject.grade` guardan el **valor** del catálogo `grade_levels`,
+no el número del grado. La migración siembra Preescolar = 0, 1.° = 1 … 11.° = 11, pero en
+producción se corrió `GradeLevelSeeder`, que renumera: **Prekinder = 0, Kinder = 1,
+Transición = 2, 1.° = 3 … 6.° = 8 … 10.° = 12, 11.° = 13**. Muestra siempre la etiqueta con
+`GradeLevel::labelFor($valor)`, nunca `"{$grade}.°"`. Para pasar de "10" (del código
+"10A") al valor del catálogo usa `ResolvesRecords::gradeValueForSchoolYear(10)`; el inverso
+es `schoolYearForGradeValue()`. Los datos de `DemoDataSeeder` usan la numeración antigua
+(10A con grado 10), así que en desarrollo las etiquetas difieren de producción.
 
-Lo que **falta** de esta fase (pedido explícitamente en el encargo, sección 6.5):
+### Importación (`/admin/importar`, lógica en `app/Support/Import/`)
+Flujo: subir → **simulación** (el importador completo corre dentro de una transacción que
+se revierte; la pantalla dice claramente «todavía no se ha guardado nada») → reporte fila
+por fila → **Confirmar importación** → lote en `import_batches`, **revertible completo**
+(`ImportService::revert`). En el historial, "Simulación sin confirmar" = no se guardó.
 
-- **Usuarios**: crear, editar, desactivar, asignar roles y sección EMC, restablecer
-  contraseña con contraseña temporal mostrada una sola vez. Ahora mismo el único
-  mecanismo es `php artisan app:crear-admin correo` por consola
-  (`app/Console/Commands/CrearAdmin.php`) — sirve para el primer ADMIN, no reemplaza
-  la pantalla de administración de usuarios.
-- **Auditoría**: la tabla `audit_logs` y el modelo `AuditLog` ya están conectados y en uso
-  en los módulos administrativos de estudiantes y seguimientos (`admin.estudiantes`,
-  `admin.seguimientos`). Falta extender el registro a las demás acciones del ADMIN y
-  a las consultas de información confidencial.
-- Carga masiva de usuarios/asignaturas por Excel (el encargo la menciona como opción
-  para asignaturas y usuarios).
-
-### ⚠️ Fase 5 — Migración de datos (parcial)
-`/admin/importar` (`Admin\ImportController` + `resources/js/pages/admin/importar.tsx`,
-lógica en `app/Support/Import/`). Flujo: subir → **simulación** (corre el importador
-completo dentro de una transacción y la revierte: lo simulado es exactamente lo que se
-guardará) → reporte fila por fila (errores, avisos, vista previa) → confirmar → lote
-en `import_batches`, **revertible completo** (`ImportService::revert`).
-
-Plantillas soportadas hoy (`ImportService::SUPPORTED`):
+Tipos (`ImportService::SUPPORTED`):
 - **Formato actual "Seguimiento y acuerdos"** (`CurrentFormatImporter`): una hoja por
-  reunión; grupo desde el título, periodo/seguimiento/fecha/director desde la cabecera;
-  columnas por **encabezado**, no por posición. Cada celda → aporte del campo
-  correspondiente; Estrategias + Responsables → estrategia individual; Fecha → fecha de
-  la reunión de grupo; director → se asigna si el grupo no tiene. No duplica aportes
-  idénticos al reimportar.
-- **Estudiantes desde Phidias** (`PhidiasStudentsImporter`): el `exported.xls` de
-  Phidias tal cual (es una tabla HTML con extensión .xls; `SheetData` la lee con DOM y solo
-  toma celdas de primer nivel, "No hay datos" = vacío). Usa Código (llave), Estudiante
-  ("APELLIDOS, NOMBRES" → "Nombres Apellidos"), Sección ("Sexto 6A" → grupo 6A, grado 6),
-  Estado y URL de la foto. Phidias manda sobre la matrícula del año (cambia de grupo,
-  revertible). Las fotos se bajan después de confirmar con el job `FetchPhidiasPhotos`
-  (cola `database`; en desarrollo hace falta `composer run dev` o `php artisan queue:work`),
-  solo para quien no tiene foto, como `fotos/{id}-phidias.jpg`, y solo desde hosts de
-  Phidias/S3 por https.
-- **Estudiantes y matrículas** (`StudentsImporter`).
-- **Asignaciones de profesores** (`TeachingAssignmentsImporter`).
+  reunión; grupo del título, periodo/seguimiento/fecha/director de la cabecera; columnas
+  por encabezado. Cada celda → aporte de su campo; Estrategias + Responsables →
+  estrategia individual; Fecha → fecha de la reunión. No duplica aportes al reimportar.
+  Los aportes quedan a nombre de quien importa.
+- **Estudiantes desde Phidias** (`PhidiasStudentsImporter`): el `exported.xls` tal cual
+  (`SheetData` detecta HTML y lee solo celdas de primer nivel; "No hay datos" = vacío).
+  Usa Código (llave), Estudiante ("APELLIDOS, NOMBRES" → "Nombres Apellidos"), Sección
+  ("Sexto 6A" → grupo 6A con el valor de catálogo de 6.°), Estado (activo/nuevo =
+  activo) y URL de la foto. Phidias manda sobre la matrícula del año (cambia de grupo,
+  revertible); retirados existentes quedan inactivos, retirados nuevos no se crean; avisa
+  de quién está en la app pero no en el archivo. Fotos: job `FetchPhidiasPhotos` en cola,
+  solo a quien no tiene foto, como `fotos/{id}-phidias.jpg`, solo desde hosts de
+  Phidias/S3 por https. **Sin worker de cola no llegan las fotos.**
+- **Estudiantes y matrículas** (`StudentsImporter`) y **Asignaciones de profesores**
+  (`TeachingAssignmentsImporter`, por correo del docente), con plantillas descargables.
 
-Emparejamiento de nombres en `NameMatcher` (sin tildes/mayúsculas, orden de palabras
-indiferente; ≥ 88 % automático con aviso, empates → error; Daniel/Daniela, Martín/Martina
-nunca se emparejan solos). Si el nombre coincide pero el estudiante ya tiene **otro**
-código institucional, es error (no se mezclan dos personas). Lo que no queda marcado con
-`import_batch_id` (direcciones de grupo, cambios de grupo, reuniones/seguimientos/grupos
-creados) se guarda en `error_report.undo` para poder revertirlo.
+Emparejamiento de nombres (`NameMatcher`): sin tildes/mayúsculas, orden de palabras
+indiferente, ≥ 88 % automático con aviso, empates → error, Daniel/Daniela y
+Martín/Martina nunca se emparejan solos. Mismo nombre con **otro** código institucional →
+error (no mezcla personas). Códigos de grupo "6A", "6 A", "6°A", "6º A" son el mismo.
 
-Falta: el resto de plantillas de `ImportTemplateType` (usuarios, desempeño, compromisos,
-apoyos externos, comité, disciplinario), Job en cola con barra de progreso (hoy es
-síncrono; con archivos del tamaño del Excel del colegio tarda segundos) y estrategias
-grupales del formato actual si el colegio las tiene en otra sección de la hoja (hoy se
-avisa que hay contenido debajo de la tabla y no se importa).
+### Respaldos (`/admin/respaldos`, `BackupController` + `App\Support\Backup\BackupService`)
+Crear, descargar, subir, restaurar y eliminar. Formato propio .zip: `manifest.json` +
+`data/{tabla}.jsonl` + `fotos/`, generado en PHP (no depende de mysqldump). Incluye
+**solo las 21 tablas del seguimiento** (`BackupService::TABLES`) y las fotos; usuarios,
+roles, permisos y sesiones nunca se respaldan ni se pisan. Restaurar exige escribir
+RESTAURAR, crea antes un respaldo «previo a restauración», reemplaza todo en **una sola
+transacción** y rechaza respaldos de versiones más nuevas (migraciones que no existen
+aquí). La extracción del .zip solo acepta entradas esperadas (sin rutas "../").
+Carpeta: `config('seguimiento.respaldos.directorio')` (por defecto `storage/app/backups`).
+`app:respaldar-base-datos` (programado a las 02:00, contenedor `scheduler`) genera el
+mismo .zip y borra solo los automáticos de más de 14 días. Los `.sql.gz` del formato
+anterior se listan solo para descargar. **Los respaldos viven en el mismo servidor**:
+conviene descargarlos periódicamente.
 
-### ❌ Fase 6 — Cierre (sin empezar)
-Polling casi en tiempo real en la reunión de grupo (hoy no hay refresco automático:
-hay que recargar o volver a navegar para ver los aportes de otra persona).
-`docker-compose.prod.yml` existe pero no se ha probado. El pipeline de GitHub Actions
-para publicar en Docker Hub (`.github/workflows/release.yml`) tampoco se ha probado
-de punta a punta. Copias de seguridad: el comando
-`php artisan app:respaldar-base-datos` existe y se probó localmente (mysqldump +
-gzip), y está programado en `routes/console.php`, pero correr el contenedor
-`scheduler` real nunca se verificó porque no hay Docker en esta máquina.
+### Auditoría
+`audit_logs` registra acciones de Administración (estudiantes, seguimientos,
+asignaciones, director de grupo), importaciones y reversiones, y respaldos/restauraciones.
+
+## Qué falta / problemas conocidos
+
+- **Grupo de Transición**: `GroupSeeder` lo crea con código **"Transición A"**, pero
+  Phidias exporta el curso como "Transición **TA**" (código "TA"). Al importar Phidias se
+  crearía un grupo "TA" aparte. Hay que unificar el código (renombrar el grupo a "TA" o
+  enseñarle al importador la equivalencia) antes de importar preescolar.
+- **Cambio de contraseña obligatorio** en el primer ingreso: `users.must_change_password`
+  existe pero nada lo hace cumplir (menos relevante con SSO).
+- **Pruebas de la matriz de permisos** celda por celda (el encargo las pide) y subir las
+  pruebas al repo si se decide quitar `tests/` del `.gitignore`.
+- **Importación**: faltan las demás plantillas de `ImportTemplateType` (usuarios,
+  desempeño, compromisos, apoyos externos, comité, disciplinario); estrategias grupales
+  del Excel actual si vienen en otra sección de la hoja; la importación es síncrona.
+- **Logo del colegio** en el membrete del PDF (hoy es texto; `public/logo.svg` es el logo de
+  Laravel del starter kit, no del colegio).
+- **Fase 6**: refresco casi en tiempo real (polling) en la reunión de grupo; probar de
+  punta a punta `docker-compose.prod.yml` y el pipeline de `release.yml`.
 
 ## Decisiones no obvias que ya se tomaron
 
-No las repitas ni las cuestiones sin leer `DECISIONES.md` primero. Las más
-importantes para seguir programando:
+No las cuestiones sin leer `DECISIONES.md`. Las más importantes:
 
-1. El starter kit de Laravel (`laravel/react-starter-kit`) no usa Fortify — trae sus
-   propios controladores de auth estilo Breeze. Se dejaron así (no se instaló
-   Fortify encima).
-2. `Group::students()` es un `belongsToMany` a través de `enrollments` (con
-   `Enrollment extends Pivot`, no `extends Model`) — **no** un `hasManyThrough`. Si
-   ves código viejo o ejemplos con `hasManyThrough` para esto, está mal: se intentó
-   así primero y falló porque `enrollments` no tiene una FK de vuelta hacia
-   `students` (es una tabla de matrícula con su propia PK, no una tabla "intermedia"
-   en el sentido clásico de Laravel).
-3. `config('seguimiento.emc_escribe_notas_clinicas')` (en `.env`:
-   `SEGUIMIENTO_EMC_ESCRIBE_NOTAS_CLINICAS`) controla si EMC puede escribir notas
-   clínicas además de leerlas. Por defecto `false` (solo Psicología escribe).
-4. "Observación" es una columna de la cuadrícula de Reunión de grupo, pero **no**
-   es una sección de la Ficha del estudiante — así lo define el boceto aprobado y el
-   encargo (sección 6.2 lista 11 secciones, sin "Observación"). No la agregues ahí de
-   nuevo; ya se intentó y se revirtió.
+1. Starter kit de Laravel con controladores de auth propios (sin Fortify).
+2. `Group::students()` es `belongsToMany` vía `enrollments` (`Enrollment extends Pivot`),
+   **no** `hasManyThrough`.
+3. `SEGUIMIENTO_EMC_ESCRIBE_NOTAS_CLINICAS` controla si EMC escribe notas clínicas
+   (por defecto no).
+4. "Observación" es columna de la Reunión de grupo, **no** sección de la Ficha.
+5. La simulación de importación es la importación real dentro de una transacción
+   revertida (no un validador aparte).
+6. Phidias: solo se guardan los campos que la app ya tiene (código, nombre, curso,
+   estado, foto); el resto de datos personales no se importa.
+7. Respaldos solo de tablas propias: nunca tocar tablas compartidas con la intranet.
 
 ## Mapa rápido de archivos clave
 
 ```
-app/Support/Scope.php                  — TODAS las reglas de permisos (léelo primero)
-app/Enums/                             — un Enum de PHP por cada campo tipo-lista
-app/Models/                            — 19 modelos, todas las relaciones con genéricos
-app/Http/Controllers/                  — un controlador por acción/recurso (ver arriba)
-app/Http/Controllers/Admin/            — los 4 controladores de /admin que sí existen
-database/migrations/                   — 24 migraciones, en orden de dependencias
-database/seeders/DemoDataSeeder.php    — los datos ficticios de prueba
-config/seguimiento.php                 — toda la configuración propia de la app
-resources/js/layouts/seguimiento-layout.tsx — barra superior institucional
-resources/js/pages/                    — una carpeta por recurso (reunion/, estudiantes/, compromisos/, admin/)
-resources/css/app.css                  — paleta y tipografías institucionales
-routes/web.php                         — todas las rutas (sin API, todo vía Inertia)
-DECISIONES.md                          — por qué se hizo cada cosa no-obvia
-README.md                              — cómo correr/desplegar, con más detalle que este archivo
+app/Support/Scope.php                    — TODAS las reglas de permisos (léelo primero)
+app/Support/Import/                      — importadores, NameMatcher, SheetData, ImportService
+app/Support/Backup/BackupService.php     — respaldos y restauración
+app/Support/StudentPhoto.php             — recorte de fotos
+app/Jobs/FetchPhidiasPhotos.php          — descarga de fotos de Phidias (cola)
+app/Enums/                               — un Enum por cada campo tipo-lista (incl. RoleName con alias)
+app/Models/                              — 21 modelos, relaciones con genéricos
+app/Http/Controllers/                    — un controlador por acción/recurso
+app/Http/Controllers/Admin/              — 10 controladores de /admin
+app/Http/Controllers/Auth/IntranetSsoController.php — SSO desde la intranet
+app/Console/Commands/                    — app:crear-admin, app:respaldar-base-datos
+database/migrations/                     — 26 migraciones
+database/seeders/                        — DemoDataSeeder (ficticio), GradeLevelSeeder y GroupSeeder (reales)
+config/seguimiento.php                   — configuración propia (SSO, EMC, periodos, escala IB, respaldos)
+resources/views/pdf/ficha.blade.php      — plantilla del PDF; resources/fonts/pdf/ sus fuentes
+resources/js/pages/                      — reunion/, estudiantes/, compromisos/, admin/ (incl. importar, asignaciones, respaldos)
+routes/web.php                           — todas las rutas (Inertia, sin API)
 ```
 
 ## Si vas a seguir construyendo
 
-Orden sugerido (completa lo que falta de cada fase antes de pasar a la siguiente,
-como pide el encargo original):
+1. Resolver el código del grupo de Transición antes de importar preescolar desde Phidias.
+2. Pruebas de la matriz de permisos contra `Scope` y decidir si las pruebas se suben.
+3. Plantillas de importación restantes y logo en el PDF.
+4. Fase 6: polling en la reunión, probar Docker y el pipeline de release.
 
-1. Cerrar la Fase 2: quitar/bloquear el registro público, forzar cambio de
-   contraseña en el primer ingreso, escribir las pruebas Pest de la matriz de
-   permisos contra `App\Support\Scope`.
-2. Cerrar la Fase 4: pantallas de Usuarios, Estudiantes/Matrículas, Asignaciones de
-   profesores, y conectar `AuditLog` a las acciones sensibles.
-3. Fase 5 completa (el asistente de migración de Excel).
-4. Fase 6 (polling, probar Docker de verdad, probar el pipeline de release).
-
-Antes de escribir una sola línea de permisos nueva: lee `app/Support/Scope.php`
-completo. Antes de tocar el diseño: abre `Seguimiento de Estudiantes.html` en un
-navegador. Antes de asumir que algo no está decidido: busca en `DECISIONES.md`.
+Antes de escribir permisos: lee `Scope.php` completo. Antes de tocar el diseño: abre el
+boceto HTML. Antes de asumir que algo no está decidido: busca en `DECISIONES.md`.
