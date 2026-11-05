@@ -13,6 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // El SSO llega desde otro origen mediante POST; el token HMAC es la
+        // autenticación y no hay sesión previa para validar CSRF.
+        $middleware->validateCsrfTokens(except: [
+            'sso/intranet',
+        ]);
+
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

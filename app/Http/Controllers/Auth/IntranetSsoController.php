@@ -23,7 +23,7 @@ class IntranetSsoController extends Controller
     public function __invoke(Request $request): RedirectResponse
     {
         $secret = (string) config('seguimiento.intranet_sso_secret');
-        $token = (string) $request->query('token', '');
+        $token = (string) ($request->input('token') ?? $request->query('token', ''));
 
         [$payloadB64, $signature] = array_pad(explode('.', $token, 2), 2, null);
 

@@ -33,7 +33,7 @@ Route::get('/', function () {
 })->name('home');
 
 // Inicio de sesión único (SSO) desde la intranet.
-Route::get('sso/intranet', IntranetSsoController::class)
+Route::match(['get', 'post'], 'sso/intranet', IntranetSsoController::class)
     ->middleware('throttle:60,1')
     ->name('sso.intranet');
 
