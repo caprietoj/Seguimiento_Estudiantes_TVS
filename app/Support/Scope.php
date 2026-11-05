@@ -228,6 +228,12 @@ class Scope
         return isset(self::teachingSubjectKeys($user)[$group->id.'|'.$subject->id]);
     }
 
+    /** Puede registrar/editar calificaciones de pruebas MAP NWEA: EMC de la sección o Admin. */
+    public static function mapScoreWrite(User $user, Group $group): bool
+    {
+        return self::isAdmin($user) || self::emcInSection($user, $group);
+    }
+
     /** @return Collection<int, Group> Grupos que el usuario puede ver, del año escolar dado. */
     public static function visibleGroups(User $user, int $schoolYearId)
     {

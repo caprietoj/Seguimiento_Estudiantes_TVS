@@ -11,7 +11,9 @@ use App\Models\Enrollment;
 use App\Models\ExternalSupport;
 use App\Models\GradeLevel;
 use App\Models\Group;
+use App\Models\MapScore;
 use App\Models\SchoolYear;
+use App\Models\Setting;
 use App\Models\Strategy;
 use App\Models\Student;
 use App\Models\Subject;
@@ -262,9 +264,10 @@ class StudentController extends Controller
         $subjects = Subject::active()->forGrade($group->grade)->orderBy('name')->get();
         $gradesByKey = $student->grades()->where('school_year_id', $selectedYear->id)->get()
             ->keyBy(fn ($g) => $g->subject_id.'|'.$g->period);
-        $performance = $subjects->map(function (Subject $subject) use ($gradesByKey, $user, $group) {
+        $ibPeriods = (int) Setting::get('ib_periodos', config('seguimiento.periodos', 3));
+        $performance = $subjects->map(function (Subject $subject) use ($gradesByKey, $user, $group, $ibPeriods) {
             $levels = [];
-            for ($p = 1; $p <= 3; $p++) {
+            for ($p = 1; $p <= $ibPeriods; $p++) {
                 $grade = $gradesByKey->get($subject->id.'|'.$p);
                 $levels[$p] = $grade?->level;
             }
@@ -276,6 +279,41 @@ class StudentController extends Controller
                 'can_write' => Scope::gradeWrite($user, $group, $subject),
             ];
         })->values();
+
+        $mapPeriods = (int) Setting::get('map_periodos', 2);
+        $configuredAreas = Setting::mapAreas(true);
+
+        /** @var \Illuminate\Database\Eloquent\Collection<int, MapScore> $mapScores */
+        $mapScores = $student->mapScores()
+            ->where('school_year_id', $selectedYear->id)
+            ->get();
+        $mapScoresByKey = $mapScores->keyBy(fn (MapScore $m) => $m->subject.'|'.$m->period);
+
+        $mapPerformance = [
+            'can_write' => Scope::mapScoreWrite($user, $group),
+            'periods_count' => $mapPeriods,
+            'items' => array_map(function (array $area) use ($mapScoresByKey, $mapPeriods): array {
+                $key = $area['key'];
+                $periods = [];
+                for ($p = 1; $p <= $mapPeriods; $p++) {
+                    /** @var MapScore|null $score */
+                    $score = $mapScoresByKey->get($key.'|'.$p);
+                    $periods[$p] = [
+                        'rit_score' => $score?->rit_score,
+                        'percentile' => $score?->percentile,
+                        'level' => $score?->performance_level?->value,
+                        'level_label' => $score?->performance_level?->label(),
+                        'level_short' => $score?->performance_level?->shortLabel(),
+                    ];
+                }
+
+                return [
+                    'subject' => $key,
+                    'label' => $area['name'],
+                    'periods' => $periods,
+                ];
+            }, $configuredAreas),
+        ];
 
         // El comité evaluador lo ve todo el que ve al estudiante (sección 4: "Ve" para profesor/director).
         $committee = [
@@ -360,6 +398,7 @@ class StudentController extends Controller
             'internalSupports' => $internalSupports,
             'externalSupports' => $externalSupports,
             'performance' => $performance,
+            'mapPerformance' => $mapPerformance,
             'committee' => $committee,
             'disciplinary' => $disciplinary,
             'stats' => [

@@ -128,6 +128,12 @@
         .lvl-warn { background: #fbf0d6; color: #8f5b00; }
         .lvl-crit { background: #fdeeee; color: #a9252a; }
         .legend { font-size: 7pt; color: #5e636e; margin-top: 5pt; }
+        .map-badge { display: inline-block; font-size: 6.5pt; padding: 1pt 5pt; border-radius: 2pt; font-family: 'Public Sans SemiBold', 'Public Sans', sans-serif; }
+        .map-high { background: #e0f2fe; color: #0369a1; }
+        .map-high_average { background: #e3f4ec; color: #106a45; }
+        .map-average { background: #fef3c7; color: #92400e; }
+        .map-low_average { background: #ffedd5; color: #9a3412; }
+        .map-low { background: #fdeeee; color: #a9252a; }
 
         .area-title { font-size: 7.5pt; letter-spacing: 0.8pt; text-transform: uppercase; color: #364a72; margin: 6pt 0 4pt 0; }
 
@@ -304,6 +310,58 @@
             </div>
         @else
             <div class="empty">El grado no tiene asignaturas asociadas.</div>
+        @endif
+
+        @if (!empty($mapPerformance['items']))
+            <div class="area-title semi" style="margin-top: 12pt; margin-bottom: 4pt;">Pruebas estandarizadas MAP Growth (NWEA)</div>
+            <table class="grid">
+                <thead>
+                    <tr>
+                        <th>Área evaluada</th>
+                        @php($mapPeriodsCount = $mapPerformance['periods_count'] ?? 2)
+                        @for ($p = 1; $p <= $mapPeriodsCount; $p++)
+                            <th class="center" style="width: {{ 280 / max(1, $mapPeriodsCount) }}pt;">Periodo {{ $p }}</th>
+                        @endfor
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($mapPerformance['items'] as $mapRow)
+                        <tr>
+                            <td class="semi" style="vertical-align: middle;">{{ $mapRow['label'] }}</td>
+                            @for ($p = 1; $p <= $mapPeriodsCount; $p++)
+                                @php($sc = $mapRow['periods'][$p] ?? null)
+                                <td class="center" style="vertical-align: middle; padding: 4pt 2pt;">
+                                    @if (!empty($sc['rit_score']) || !empty($sc['percentile']) || !empty($sc['level']))
+                                        <div style="font-size: 8pt; margin-bottom: 2pt;">
+                                            @if (!empty($sc['rit_score']))
+                                                <b style="color: #212838;">{{ $sc['rit_score'] }}</b> <span class="muted" style="font-size: 7pt;">RIT</span>
+                                            @endif
+                                            @if (!empty($sc['rit_score']) && !empty($sc['percentile']))
+                                                <span class="muted">·</span>
+                                            @endif
+                                            @if (!empty($sc['percentile']))
+                                                <span class="muted" style="font-size: 7pt;">P{{ $sc['percentile'] }}</span>
+                                            @endif
+                                        </div>
+                                        @if (!empty($sc['level']))
+                                            <span class="map-badge map-{{ $sc['level'] }}">{{ $sc['level_short'] ?? $sc['level'] }}</span>
+                                        @endif
+                                    @else
+                                        <span class="muted">—</span>
+                                    @endif
+                                </td>
+                            @endfor
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+            <div class="legend" style="margin-top: 4pt;">
+                <span class="map-badge map-high">Alto</span> &gt; 80% &nbsp;&nbsp;
+                <span class="map-badge map-high_average">Prom. alto</span> 61–80% &nbsp;&nbsp;
+                <span class="map-badge map-average">Promedio</span> 41–60% &nbsp;&nbsp;
+                <span class="map-badge map-low_average">Prom. bajo</span> 21–40% &nbsp;&nbsp;
+                <span class="map-badge map-low">Bajo</span> &lt; 21%
+            </div>
         @endif
 
         @if (count($subjectAttentions) > 0)

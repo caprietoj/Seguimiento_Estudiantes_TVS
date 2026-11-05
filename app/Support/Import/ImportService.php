@@ -7,9 +7,11 @@ use App\Jobs\FetchPhidiasPhotos;
 use App\Models\Contribution;
 use App\Models\Enrollment;
 use App\Models\FollowUp;
+use App\Models\Grade;
 use App\Models\Group;
 use App\Models\GroupMeeting;
 use App\Models\ImportBatch;
+use App\Models\MapScore;
 use App\Models\SchoolYear;
 use App\Models\Strategy;
 use App\Models\Student;
@@ -26,6 +28,8 @@ class ImportService
         ImportTemplateType::PhidiasStudents,
         ImportTemplateType::StudentsEnrollments,
         ImportTemplateType::TeachingAssignments,
+        ImportTemplateType::Grades,
+        ImportTemplateType::MapScores,
     ];
 
     /** @param array<string, mixed> $options */
@@ -36,6 +40,8 @@ class ImportService
             ImportTemplateType::StudentsEnrollments => new StudentsImporter($year, $user, $options),
             ImportTemplateType::PhidiasStudents => new PhidiasStudentsImporter($year, $user, $options),
             ImportTemplateType::TeachingAssignments => new TeachingAssignmentsImporter($year, $user, $options),
+            ImportTemplateType::Grades => new GradesImporter($year, $user, $options),
+            ImportTemplateType::MapScores => new MapScoresImporter($year, $user, $options),
             default => throw new InvalidArgumentException("La plantilla {$type->value} todavía no se puede importar."),
         };
     }
@@ -46,6 +52,8 @@ class ImportService
         return match ($type) {
             ImportTemplateType::StudentsEnrollments => StudentsImporter::TEMPLATE,
             ImportTemplateType::TeachingAssignments => TeachingAssignmentsImporter::TEMPLATE,
+            ImportTemplateType::Grades => GradesImporter::TEMPLATE,
+            ImportTemplateType::MapScores => MapScoresImporter::TEMPLATE,
             default => null,
         };
     }
@@ -70,6 +78,8 @@ class ImportService
 
             $done['Aportes'] = Contribution::withTrashed()->where('import_batch_id', $batch->id)->forceDelete();
             $done['Estrategias'] = Strategy::withTrashed()->where('import_batch_id', $batch->id)->forceDelete();
+            $done['Calificaciones'] = Grade::where('import_batch_id', $batch->id)->delete();
+            $done['Calificaciones MAP'] = MapScore::where('import_batch_id', $batch->id)->delete();
 
             /** @var list<array{type: string, id: int, previous?: int|null}> $undo */
             $undo = array_reverse($batch->error_report['undo'] ?? []);

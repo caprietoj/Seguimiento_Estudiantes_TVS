@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\BackupController as AdminBackupController;
 use App\Http\Controllers\Admin\FollowUpController as AdminFollowUpController;
+use App\Http\Controllers\Admin\GradeConfigController as AdminGradeConfigController;
 use App\Http\Controllers\Admin\GradeLevelController as AdminGradeLevelController;
 use App\Http\Controllers\Admin\GroupController as AdminGroupController;
 use App\Http\Controllers\Admin\ImportController as AdminImportController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\DisciplinaryCaseController;
 use App\Http\Controllers\ExternalSupportController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\GroupMeetingController;
+use App\Http\Controllers\MapScoreController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Controllers\ReunionController;
 use App\Http\Controllers\StrategyController;
@@ -66,6 +68,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('apoyos-externos/{externalSupport}', [ExternalSupportController::class, 'destroy'])->name('apoyos-externos.destroy');
 
     Route::put('desempeno', [GradeController::class, 'update'])->name('desempeno.update');
+    Route::put('desempeno/map', [MapScoreController::class, 'update'])->name('desempeno.map.update');
 
     Route::post('comite', [CommitteeDecisionController::class, 'store'])->name('comite.store');
 
@@ -113,6 +116,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('asignaciones', [AdminTeachingAssignmentController::class, 'store'])->name('asignaciones.store');
         Route::delete('asignaciones/{assignment}', [AdminTeachingAssignmentController::class, 'destroy'])->name('asignaciones.destroy');
         Route::put('asignaciones/grupo/{group}/director', [AdminTeachingAssignmentController::class, 'director'])->name('asignaciones.director');
+
+        Route::get('calificaciones', [AdminGradeConfigController::class, 'index'])->name('calificaciones.index');
+        Route::put('calificaciones', [AdminGradeConfigController::class, 'update'])->name('calificaciones.update');
 
         Route::get('respaldos', [AdminBackupController::class, 'index'])->name('respaldos.index');
         Route::post('respaldos', [AdminBackupController::class, 'store'])->name('respaldos.store');

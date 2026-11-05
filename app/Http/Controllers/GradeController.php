@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Grade;
+use App\Models\Setting;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Support\Scope;
@@ -13,14 +14,15 @@ class GradeController extends Controller
 {
     public function update(Request $request): RedirectResponse
     {
-        $min = config('seguimiento.nivel_minimo', 1);
-        $max = config('seguimiento.nivel_maximo', 7);
+        $min = (int) Setting::get('ib_escala_min', config('seguimiento.nivel_minimo', 1));
+        $max = (int) Setting::get('ib_escala_max', config('seguimiento.nivel_maximo', 7));
+        $periods = (int) Setting::get('ib_periodos', config('seguimiento.periodos', 3));
 
         $data = $request->validate([
             'student_id' => ['required', 'integer', 'exists:students,id'],
             'subject_id' => ['required', 'integer', 'exists:subjects,id'],
             'school_year_id' => ['required', 'integer', 'exists:school_years,id'],
-            'period' => ['required', 'integer', 'between:1,3'],
+            'period' => ['required', 'integer', "between:1,{$periods}"],
             'level' => ['nullable', 'integer', "between:{$min},{$max}"],
         ]);
 

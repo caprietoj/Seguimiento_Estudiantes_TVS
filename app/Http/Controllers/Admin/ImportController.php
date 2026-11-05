@@ -218,10 +218,16 @@ class ImportController extends Controller
             $sheet->fromArray($headers, null, 'A1');
             $last = chr(ord('A') + count($headers) - 1);
             $sheet->getStyle("A1:{$last}1")->getFont()->setBold(true);
-            $sheet->getStyle("A1:{$last}1")->getFill()->setFillType('solid')->getStartColor()->setRGB('DCE6F1');
-            $sheet->fromArray($templateType === ImportTemplateType::StudentsEnrollments
-                ? ['TVS-0001', 'Ana María Pérez Gómez', '10A', 'DP', 'Sí']
-                : ['docente@tvs.edu.co', 'Nombre Apellido', '10A', 'Matemáticas', 'No'], null, 'A2');
+            $sampleRow = match ($templateType) {
+                ImportTemplateType::StudentsEnrollments => ['TVS-0001', 'Ana María Pérez Gómez', '10A', 'DP', 'Sí'],
+                ImportTemplateType::TeachingAssignments => ['docente@tvs.edu.co', 'Nombre Apellido', '10A', 'Matemáticas', 'No'],
+                ImportTemplateType::Grades => ['TVS-0001', 'Ana María Pérez Gómez', '10A', 'Matemáticas', '1', '6'],
+                ImportTemplateType::MapScores => ['TVS-0001', 'Ana María Pérez Gómez', '10A', 'Matemáticas', '1', '215', '68', 'Promedio alto'],
+                default => [],
+            };
+            if (! empty($sampleRow)) {
+                $sheet->fromArray($sampleRow, null, 'A2');
+            }
         }
 
         foreach (range(1, count($headers)) as $i) {

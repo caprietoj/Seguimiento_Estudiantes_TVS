@@ -17,6 +17,7 @@ enum ImportTemplateType: string
     case ExternalSupports = 'external_supports';
     case CommitteeDecisions = 'committee_decisions';
     case DisciplinaryCases = 'disciplinary_cases';
+    case MapScores = 'map_scores';
 
     public function label(): string
     {
@@ -27,7 +28,8 @@ enum ImportTemplateType: string
             self::PhidiasStudents => 'Estudiantes desde Phidias',
             self::Groups => 'Grupos y dirección de grupo',
             self::TeachingAssignments => 'Asignaciones de profesores',
-            self::Grades => 'Desempeño académico',
+            self::Grades => 'Calificaciones de asignaturas (IB)',
+            self::MapScores => 'Calificaciones MAP Growth (NWEA)',
             self::Contributions => 'Aportes',
             self::Strategies => 'Estrategias',
             self::Commitments => 'Compromisos',

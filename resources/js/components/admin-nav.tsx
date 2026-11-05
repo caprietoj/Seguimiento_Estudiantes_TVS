@@ -9,6 +9,7 @@ const items = [
     { label: 'Estudiantes', href: '/admin/estudiantes' },
     { label: 'Asignaturas', href: '/admin/asignaturas' },
     { label: 'Asignaciones', href: '/admin/asignaciones' },
+    { label: 'Calificaciones', href: '/admin/calificaciones' },
     { label: 'Importar', href: '/admin/importar' },
     { label: 'Respaldos', href: '/admin/respaldos' },
 ];

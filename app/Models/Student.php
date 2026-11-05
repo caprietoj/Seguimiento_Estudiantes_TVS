@@ -66,6 +66,12 @@ class Student extends Model
         return $this->hasMany(Grade::class);
     }
 
+    /** @return HasMany<MapScore, $this> */
+    public function mapScores(): HasMany
+    {
+        return $this->hasMany(MapScore::class);
+    }
+
     /** @return HasMany<CommitteeDecision, $this> */
     public function committeeDecisions(): HasMany
     {

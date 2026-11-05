@@ -1,4 +1,7 @@
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import SeguimientoLayout from '@/layouts/seguimiento-layout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
@@ -65,6 +68,26 @@ interface PerformanceRow {
     can_write: boolean;
 }
 
+interface MapScorePeriod {
+    rit_score: number | null;
+    percentile: number | null;
+    level: string | null;
+    level_label: string | null;
+    level_short: string | null;
+}
+
+interface MapSubjectRow {
+    subject: string;
+    label: string;
+    periods: Record<number, MapScorePeriod>;
+}
+
+interface MapPerformanceData {
+    can_write: boolean;
+    periods_count?: number;
+    items: MapSubjectRow[];
+}
+
 interface CommitteeItem {
     id: number;
     decision: string;
@@ -112,6 +135,7 @@ interface FichaProps {
     internalSupports: { field: string; label: string; notes: Note[]; can_write: boolean }[];
     externalSupports: { items: ExternalSupportItem[]; can_write: boolean } | null;
     performance: PerformanceRow[];
+    mapPerformance?: MapPerformanceData;
     committee: { items: CommitteeItem[]; can_write: boolean };
     disciplinary: { items: DisciplinaryItem[]; can_write: boolean } | null;
     stats: { late_commitments: number; open_commitments: number; attention_subjects: number };
@@ -133,6 +157,17 @@ function lvlClass(level: number | null | undefined) {
     if (level === 4) return 'bg-muted text-foreground';
 
     return 'bg-good-soft text-good';
+}
+
+function mapLevelClass(level: string | null | undefined) {
+    if (!level) return 'bg-muted/50 text-muted-foreground border-transparent';
+    if (level === 'low') return 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-900';
+    if (level === 'low_average') return 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-900';
+    if (level === 'average') return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-900';
+    if (level === 'high_average') return 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-900';
+    if (level === 'high') return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900';
+
+    return 'bg-muted/50 text-muted-foreground border-transparent';
 }
 
 function DeleteButton({ onConfirm }: { onConfirm: () => void }) {
@@ -275,6 +310,7 @@ export default function FichaEstudiante(props: FichaProps) {
         internalSupports,
         externalSupports,
         performance,
+        mapPerformance,
         committee,
         disciplinary,
         stats,
@@ -312,6 +348,15 @@ export default function FichaEstudiante(props: FichaProps) {
         action_taken: '',
     });
     const [disciplinaryOpen, setDisciplinaryOpen] = useState(false);
+    const [editingMap, setEditingMap] = useState<{
+        subject: string;
+        subjectLabel: string;
+        period: number;
+        periodLabel: string;
+        rit: string;
+        percentile: string;
+        level: string;
+    } | null>(null);
 
     const jumpTargets = [
         ['f-fort', 'Fortalezas'],
@@ -863,6 +908,148 @@ export default function FichaEstudiante(props: FichaProps) {
                             </table>
                         </div>
 
+                        {/* ── Pruebas estandarizadas MAP Growth (NWEA) ── */}
+                        <div className="mt-6 border-t border-border pt-5">
+                            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <h4 className="text-xs font-semibold tracking-wide text-primary uppercase">
+                                        Pruebas estandarizadas MAP Growth (NWEA)
+                                    </h4>
+                                    <p className="text-[11px] text-muted-foreground">
+                                        Progreso académico estandarizado · Escala RIT y Percentil normativo
+                                    </p>
+                                </div>
+                                {mapPerformance?.can_write && (
+                                    <span className="text-[11px] text-muted-foreground bg-muted/70 px-2 py-0.5 rounded">
+                                        Haz clic en una celda para registrar o editar
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="text-muted-foreground text-left text-[11px] uppercase">
+                                            <th className="pb-1.5">Área evaluada</th>
+                                            {Array.from({ length: mapPerformance?.periods_count ?? 2 }, (_, i) => i + 1).map((p) => (
+                                                <th key={p} className="pb-1.5 text-center">Periodo {p}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {mapPerformance?.items.map((row) => (
+                                            <tr key={row.subject} className="border-border border-t">
+                                                <td className="py-2.5 font-medium text-xs text-foreground/90">{row.label}</td>
+                                                {Array.from({ length: mapPerformance?.periods_count ?? 2 }, (_, i) => ({
+                                                    p: i + 1,
+                                                    label: `Periodo ${i + 1}`,
+                                                })).map(({ p, label }) => {
+                                                    const sc = row.periods[p];
+                                                    const hasData = sc && (sc.rit_score !== null || sc.percentile !== null || sc.level !== null);
+
+                                                    return (
+                                                        <td key={p} className="py-2 px-1 text-center">
+                                                            {mapPerformance?.can_write ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        setEditingMap({
+                                                                            subject: row.subject,
+                                                                            subjectLabel: row.label,
+                                                                            period: p,
+                                                                            periodLabel: label,
+                                                                            rit: sc?.rit_score ? String(sc.rit_score) : '',
+                                                                            percentile: sc?.percentile ? String(sc.percentile) : '',
+                                                                            level: sc?.level ?? '',
+                                                                        })
+                                                                    }
+                                                                    className="group mx-auto flex min-h-[46px] w-full max-w-[130px] flex-col items-center justify-center rounded-md border border-dashed border-border/80 p-1.5 transition-all hover:border-primary/50 hover:bg-accent/50"
+                                                                    title="Clic para registrar o editar calificación MAP"
+                                                                >
+                                                                    {hasData ? (
+                                                                        <>
+                                                                            <div className="font-mono text-xs font-semibold">
+                                                                                {sc.rit_score !== null && (
+                                                                                    <span>
+                                                                                        {sc.rit_score} <span className="text-[10px] text-muted-foreground font-normal">RIT</span>
+                                                                                    </span>
+                                                                                )}
+                                                                                {sc.rit_score !== null && sc.percentile !== null && (
+                                                                                    <span className="mx-1 text-muted-foreground font-normal">·</span>
+                                                                                )}
+                                                                                {sc.percentile !== null && (
+                                                                                    <span className="text-muted-foreground text-[11px] font-normal">P{sc.percentile}</span>
+                                                                                )}
+                                                                            </div>
+                                                                            {sc.level_short && (
+                                                                                <span className={'mt-0.5 inline-flex items-center rounded border px-1.5 py-0.2 text-[10px] font-medium ' + mapLevelClass(sc.level)}>
+                                                                                    {sc.level_short}
+                                                                                </span>
+                                                                            )}
+                                                                        </>
+                                                                    ) : (
+                                                                        <span className="text-xs text-muted-foreground/60 group-hover:text-primary">
+                                                                            + Registrar
+                                                                        </span>
+                                                                    )}
+                                                                </button>
+                                                            ) : (
+                                                                <div className="mx-auto flex min-h-[46px] w-full max-w-[130px] flex-col items-center justify-center rounded-md p-1.5">
+                                                                    {hasData ? (
+                                                                        <>
+                                                                            <div className="font-mono text-xs font-semibold">
+                                                                                {sc.rit_score !== null && (
+                                                                                    <span>
+                                                                                        {sc.rit_score} <span className="text-[10px] text-muted-foreground font-normal">RIT</span>
+                                                                                    </span>
+                                                                                )}
+                                                                                {sc.rit_score !== null && sc.percentile !== null && (
+                                                                                    <span className="mx-1 text-muted-foreground font-normal">·</span>
+                                                                                )}
+                                                                                {sc.percentile !== null && (
+                                                                                    <span className="text-muted-foreground text-[11px] font-normal">P{sc.percentile}</span>
+                                                                                )}
+                                                                            </div>
+                                                                            {sc.level_short && (
+                                                                                <span className={'mt-0.5 inline-flex items-center rounded border px-1.5 py-0.2 text-[10px] font-medium ' + mapLevelClass(sc.level)}>
+                                                                                    {sc.level_short}
+                                                                                </span>
+                                                                            )}
+                                                                        </>
+                                                                    ) : (
+                                                                        <span className="text-muted-foreground">–</span>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                    );
+                                                })}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
+                                <span className="font-medium text-foreground">Quintiles NWEA:</span>
+                                <span className="inline-flex items-center gap-1">
+                                    <span className={'rounded border px-1 py-0.2 text-[10px] font-medium ' + mapLevelClass('high')}>Alto</span> &gt; 80%
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                    <span className={'rounded border px-1 py-0.2 text-[10px] font-medium ' + mapLevelClass('high_average')}>Prom. alto</span> 61–80%
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                    <span className={'rounded border px-1 py-0.2 text-[10px] font-medium ' + mapLevelClass('average')}>Promedio</span> 41–60%
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                    <span className={'rounded border px-1 py-0.2 text-[10px] font-medium ' + mapLevelClass('low_average')}>Prom. bajo</span> 21–40%
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                    <span className={'rounded border px-1 py-0.2 text-[10px] font-medium ' + mapLevelClass('low')}>Bajo</span> &lt; 21%
+                                </span>
+                            </div>
+                        </div>
+
                         {subjectAttentions.length > 0 && (
                             <div className="mt-4 border-t border-border pt-3">
                                 <h4 className="mb-2 text-xs font-semibold tracking-wide text-primary uppercase">
@@ -1069,6 +1256,139 @@ export default function FichaEstudiante(props: FichaProps) {
                     )}
                 </div>
             </div>
+
+            {editingMap && (
+                <Dialog open={editingMap !== null} onOpenChange={(open) => !open && setEditingMap(null)}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Calificación MAP Growth · NWEA</DialogTitle>
+                            <DialogDescription>
+                                {editingMap.subjectLabel} · {editingMap.periodLabel}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                router.put(
+                                    '/desempeno/map',
+                                    {
+                                        student_id: student.id,
+                                        school_year_id: selectedYearId,
+                                        subject: editingMap.subject,
+                                        period: editingMap.period,
+                                        rit_score: editingMap.rit ? parseInt(editingMap.rit, 10) : null,
+                                        percentile: editingMap.percentile ? parseInt(editingMap.percentile, 10) : null,
+                                        performance_level: editingMap.level || null,
+                                    },
+                                    {
+                                        preserveScroll: true,
+                                        onSuccess: () => setEditingMap(null),
+                                    },
+                                );
+                            }}
+                            className="space-y-4"
+                        >
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="map-rit">Puntaje RIT</Label>
+                                    <Input
+                                        id="map-rit"
+                                        type="number"
+                                        min={100}
+                                        max={350}
+                                        placeholder="Ej. 215"
+                                        value={editingMap.rit}
+                                        onChange={(e) => setEditingMap({ ...editingMap, rit: e.target.value })}
+                                    />
+                                    <p className="text-[10px] text-muted-foreground">Escala Rasch Unit (100–350)</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="map-percentile">Percentil (1–99)</Label>
+                                    <Input
+                                        id="map-percentile"
+                                        type="number"
+                                        min={1}
+                                        max={99}
+                                        placeholder="Ej. 65"
+                                        value={editingMap.percentile}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            const p = parseInt(val, 10);
+                                            let suggestedLevel = editingMap.level;
+                                            if (!isNaN(p)) {
+                                                if (p < 21) suggestedLevel = 'low';
+                                                else if (p <= 40) suggestedLevel = 'low_average';
+                                                else if (p <= 60) suggestedLevel = 'average';
+                                                else if (p <= 80) suggestedLevel = 'high_average';
+                                                else suggestedLevel = 'high';
+                                            }
+                                            setEditingMap({ ...editingMap, percentile: val, level: suggestedLevel });
+                                        }}
+                                    />
+                                    <p className="text-[10px] text-muted-foreground">Rango normativo (1–99)</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label htmlFor="map-level">Nivel de desempeño (Quintil NWEA)</Label>
+                                <select
+                                    id="map-level"
+                                    className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+                                    value={editingMap.level}
+                                    onChange={(e) => setEditingMap({ ...editingMap, level: e.target.value })}
+                                >
+                                    <option value="">– Sin clasificar –</option>
+                                    <option value="high">Alto (&gt; 80%)</option>
+                                    <option value="high_average">Promedio alto (61–80%)</option>
+                                    <option value="average">Promedio (41–60%)</option>
+                                    <option value="low_average">Promedio bajo (21–40%)</option>
+                                    <option value="low">Bajo (&lt; 21%)</option>
+                                </select>
+                            </div>
+
+                            <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between">
+                                <div>
+                                    {(editingMap.rit || editingMap.percentile || editingMap.level) && (
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => {
+                                                router.put(
+                                                    '/desempeno/map',
+                                                    {
+                                                        student_id: student.id,
+                                                        school_year_id: selectedYearId,
+                                                        subject: editingMap.subject,
+                                                        period: editingMap.period,
+                                                        rit_score: null,
+                                                        percentile: null,
+                                                        performance_level: null,
+                                                    },
+                                                    {
+                                                        preserveScroll: true,
+                                                        onSuccess: () => setEditingMap(null),
+                                                    },
+                                                );
+                                            }}
+                                        >
+                                            Borrar calificación
+                                        </Button>
+                                    )}
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button type="button" variant="outline" size="sm" onClick={() => setEditingMap(null)}>
+                                        Cancelar
+                                    </Button>
+                                    <Button type="submit" size="sm">
+                                        Guardar
+                                    </Button>
+                                </div>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+            )}
         </SeguimientoLayout>
     );
 }
