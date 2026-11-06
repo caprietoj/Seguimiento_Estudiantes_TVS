@@ -47,6 +47,7 @@ class CurrentFormatImporter extends Importer
         'support_tutoring' => ['tutorias', 'tutoria'],
         'support_other' => ['otros', 'otro'],
         'observation' => ['observacion', 'observaciones'],
+        'conclusion' => ['conclusion', 'conclusión', 'conclusiones'],
     ];
 
     /** @var array<string, ContributionField> */
@@ -62,6 +63,7 @@ class CurrentFormatImporter extends Importer
         'support_tutoring' => ContributionField::SupportTutoring,
         'support_other' => ContributionField::SupportOther,
         'observation' => ContributionField::Observation,
+        'conclusion' => ContributionField::Conclusion,
     ];
 
     protected function process(array $sheets, ImportReport $report): void

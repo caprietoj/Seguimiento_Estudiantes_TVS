@@ -127,6 +127,9 @@ interface FichaProps {
     canWriteImprovements: boolean;
     subjectAttentions?: Note[];
     canWriteSubjectAttentions?: boolean;
+    conclusions?: Note[];
+    canSeeConclusions?: boolean;
+    canWriteConclusions?: boolean;
     individualStrategies: IndividualStrategy[];
     canCreateStrategy: boolean;
     groupStrategies: GroupStrategy[];
@@ -302,6 +305,9 @@ export default function FichaEstudiante(props: FichaProps) {
         canWriteImprovements,
         subjectAttentions = [],
         canWriteSubjectAttentions = false,
+        conclusions = [],
+        canSeeConclusions = false,
+        canWriteConclusions = false,
         individualStrategies,
         canCreateStrategy,
         groupStrategies,
@@ -361,6 +367,7 @@ export default function FichaEstudiante(props: FichaProps) {
     const jumpTargets = [
         ['f-fort', 'Fortalezas'],
         ['f-mej', 'Aspectos de mejora'],
+        ['f-concl', 'Conclusión'],
         ['f-ei', 'Estrategias individuales'],
         ['f-eg', 'Estrategias grupales'],
         ['f-comp', 'Compromisos'],
@@ -610,6 +617,17 @@ export default function FichaEstudiante(props: FichaProps) {
                             <AddNoteForm studentId={student.id} field="improvement" followUpId={activeFollowUpId} label="Agregar" />
                         )}
                     </Section>
+
+                    {canSeeConclusions ? (
+                        <Section id="f-concl" title="Conclusión">
+                            <NoteList notes={conclusions} onDelete={(id) => router.delete(`/aportes/${id}`, { preserveScroll: true })} />
+                            {canWriteConclusions && activeFollowUpId && (
+                                <AddNoteForm studentId={student.id} field="conclusion" followUpId={activeFollowUpId} label="Agregar" />
+                            )}
+                        </Section>
+                    ) : (
+                        <LockedSection id="f-concl" title="Conclusión" who="Coordinación y dirección de grupo" />
+                    )}
 
                     <Section id="f-ei" title="Estrategias individuales y su seguimiento">
                         <div className="flex flex-col gap-2">

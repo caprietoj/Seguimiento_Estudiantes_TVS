@@ -353,6 +353,8 @@ class StudentController extends Controller
             return $g && $g->level !== null && $g->level <= config('seguimiento.nivel_atencion', 3);
         })->count();
 
+        $canSeeConclusions = Scope::seesField($user, $group, ContributionField::Conclusion);
+
         return [
             'student' => [
                 'id' => $student->id,
@@ -390,6 +392,9 @@ class StudentController extends Controller
             'canWriteImprovements' => Scope::writesField($user, $group, ContributionField::Improvement),
             'subjectAttentions' => $notesFor(ContributionField::SubjectAttention->value),
             'canWriteSubjectAttentions' => Scope::writesField($user, $group, ContributionField::SubjectAttention),
+            'conclusions' => $canSeeConclusions ? $notesFor(ContributionField::Conclusion->value) : [],
+            'canSeeConclusions' => $canSeeConclusions,
+            'canWriteConclusions' => Scope::writesField($user, $group, ContributionField::Conclusion),
             'individualStrategies' => $individualStrategies,
             'canCreateStrategy' => Scope::inScope($user, $group),
             'groupStrategies' => $groupStrategies,

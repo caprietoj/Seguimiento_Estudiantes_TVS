@@ -7,6 +7,7 @@ enum ContributionField: string
     case Strength = 'strength';
     case Improvement = 'improvement';
     case Observation = 'observation';
+    case Conclusion = 'conclusion';
     case SupportPsychology = 'support_psychology';
     case SupportSpeech = 'support_speech';
     case SupportOt = 'support_ot';
@@ -22,6 +23,7 @@ enum ContributionField: string
             self::Strength => 'Fortalezas / avances',
             self::Improvement => 'Aspectos de mejora',
             self::Observation => 'Observación',
+            self::Conclusion => 'Conclusión',
             self::SubjectAttention => 'Asignaturas para tener en cuenta',
             self::SupportPsychology => 'Psicología',
             self::SupportSpeech => 'Fonoaudiología',
