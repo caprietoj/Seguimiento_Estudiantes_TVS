@@ -767,6 +767,7 @@ function StudentCell({ student, index }: { student: StudentRow; index: number })
                 <div className="flex items-center gap-1.5">
                     <Link
                         href={`/estudiantes/${student.id}`}
+                        prefetch
                         className="text-primary group-hover/row:text-primary truncate text-[13px] leading-snug font-bold hover:underline"
                         title="Ver ficha integral del estudiante"
                     >

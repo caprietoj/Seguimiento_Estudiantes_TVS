@@ -31,6 +31,7 @@ RUN composer install \
         --no-scripts \
         --no-autoloader \
         --optimize-autoloader \
+        --ignore-platform-req=ext-gd \
         --no-interaction
 
 COPY . .

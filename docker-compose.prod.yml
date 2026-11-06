@@ -15,13 +15,25 @@ services:
       - "${APP_PORT:-8080}:8080"
     env_file:
       - .env
+    environment:
+      # PHP-FPM: 5 workers por defecto se saturaban con pocos usuarios
+      # simultáneos (las peticiones hacían cola). 25 workers con 31 GB de RAM
+      # deja margen de sobra (~50 MB por worker).
+      PHP_FPM_PM_CONTROL: dynamic
+      PHP_FPM_PM_MAX_CHILDREN: "25"
+      PHP_FPM_PM_START_SERVERS: "5"
+      PHP_FPM_PM_MIN_SPARE_SERVERS: "3"
+      PHP_FPM_PM_MAX_SPARE_SERVERS: "8"
+      PHP_FPM_PM_MAX_REQUESTS: "500"
     volumes:
       - storage_data:/var/www/html/storage/app
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "healthcheck"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/up || exit 1"]
       interval: 30s
       timeout: 5s
       start_period: 30s
@@ -47,6 +59,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - internal
 
@@ -67,12 +81,43 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     networks:
       - internal
 
   mysql:
     image: mysql:8.4
     restart: unless-stopped
+    # Ajustes de rendimiento: el buffer pool por defecto (128 MB) es pequeño y
+    # las tablas temporales se quedaban en disco. La durabilidad (flush=1) se
+    # mantiene intacta.
+    command:
+      - --innodb-buffer-pool-size=512M
+      - --tmp-table-size=64M
+      - --max-heap-table-size=64M
+      - --max-connections=200
     env_file:
       - .env
     environment:
@@ -95,6 +140,7 @@ services:
 volumes:
   db_data:
   storage_data:
+  redis_data:
 
 networks:
   internal:

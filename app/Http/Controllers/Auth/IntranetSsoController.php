@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Enums\RoleName;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -49,9 +48,20 @@ class IntranetSsoController extends Controller
             abort(403, 'Token SSO ya utilizado.');
         }
 
-        $user = User::find($payload['uid']);
+        // La intranet y Seguimiento usan bases de datos distintas, por lo que el
+        // id numérico del usuario no coincide entre ambas. El correo sí es el
+        // mismo en los dos sistemas y es el identificador fiable del SSO.
+        $email = isset($payload['email']) ? trim((string) $payload['email']) : '';
 
-        if (! $user || ! $user->isActive() || (isset($payload['email']) && $user->email !== $payload['email'])) {
+        $user = $email !== ''
+            ? User::whereRaw('lower(email) = ?', [mb_strtolower($email)])->first()
+            : User::find($payload['uid']);
+
+        if (
+            ! $user
+            || ! $user->isActive()
+            || ($email !== '' && mb_strtolower($user->email) !== mb_strtolower($email))
+        ) {
             abort(403, 'Usuario SSO no válido.');
         }
 
@@ -59,10 +69,6 @@ class IntranetSsoController extends Controller
         $request->session()->regenerate();
 
         $user->forceFill(['last_login_at' => now()])->save();
-
-        if ($user->hasRole(RoleName::Admin->value)) {
-            return redirect()->to('/admin');
-        }
 
         return redirect()->to('/reunion');
     }

@@ -466,6 +466,7 @@ export default function AdminEstudiantes({ schoolYears, selectedYearId, groups, 
                                     <div className="flex items-center justify-end gap-1.5">
                                         <Link
                                             href={`/estudiantes/${s.id}?anio=${selectedYearId}`}
+                                            prefetch
                                             className="border-border text-primary hover:bg-accent flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold transition"
                                             title="Ver ficha de seguimiento"
                                         >

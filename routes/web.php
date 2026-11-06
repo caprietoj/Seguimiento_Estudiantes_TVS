@@ -30,7 +30,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return auth()->check()
-        ? to_route('dashboard')
+        ? to_route('reunion.index')
         : to_route('login');
 })->name('home');
 

@@ -34,6 +34,7 @@ export default function SeguimientoLayout({ children }: SeguimientoLayoutProps) 
                             <Link
                                 key={tab.href}
                                 href={tab.href}
+                                prefetch
                                 className={
                                     'rounded-md px-3 py-1.5 text-sm font-semibold ' +
                                     (url.startsWith(tab.href) ? 'text-primary bg-white' : 'text-primary-foreground/85 hover:text-primary-foreground')

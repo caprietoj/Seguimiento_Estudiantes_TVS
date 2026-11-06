@@ -249,6 +249,8 @@ class Scope
         return Group::query()
             ->where('school_year_id', $schoolYearId)
             ->with('section')
+            ->orderBy('grade')
+            ->orderBy('code')
             ->get()
             ->filter(fn (Group $group) => self::inScope($user, $group))
             ->values();
