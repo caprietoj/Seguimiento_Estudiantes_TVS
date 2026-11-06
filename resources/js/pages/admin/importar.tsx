@@ -66,7 +66,7 @@ const MAPPING = [
     ['Asignaturas para tener en cuenta', 'Aporte · Asignaturas para tener en cuenta'],
     ['Estrategias + Responsables', 'Estrategia individual activa, con su responsable'],
     ['Psicología, Fonoaudiología, T. ocupacional, Neuropsicología', 'Nota del Dpto. de apoyo (confidencial, mismos permisos que hoy)'],
-    ['Coordinación', 'Nota de Coordinación'],
+    ['Coordinación, Tutorías, Otros', 'Nota de Coordinación / Tutorías / Otros apoyos'],
     ['Observación', 'Aporte · Observación (columna de la reunión de grupo)'],
     ['Fecha / Director(a) de grupo', 'Fecha de la reunión y director(a) del grupo si no tenía'],
 ];

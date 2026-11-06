@@ -12,6 +12,8 @@ enum ContributionField: string
     case SupportOt = 'support_ot';
     case SupportNeuro = 'support_neuro';
     case SupportCoordination = 'support_coordination';
+    case SupportTutoring = 'support_tutoring';
+    case SupportOther = 'support_other';
     case SubjectAttention = 'subject_attention';
 
     public function label(): string
@@ -26,6 +28,8 @@ enum ContributionField: string
             self::SupportOt => 'Terapia ocupacional',
             self::SupportNeuro => 'Neuropsicología',
             self::SupportCoordination => 'Coordinación',
+            self::SupportTutoring => 'Tutorías',
+            self::SupportOther => 'Otros',
         };
     }
 
@@ -42,7 +46,7 @@ enum ContributionField: string
 
     public function isSupportArea(): bool
     {
-        return $this->isClinical() || $this === self::SupportCoordination;
+        return in_array($this, self::supportAreas(), true);
     }
 
     /** @return ContributionField[] */
@@ -54,6 +58,8 @@ enum ContributionField: string
             self::SupportOt,
             self::SupportNeuro,
             self::SupportCoordination,
+            self::SupportTutoring,
+            self::SupportOther,
         ];
     }
 }

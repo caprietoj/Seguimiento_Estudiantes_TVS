@@ -157,9 +157,9 @@ class Scope
             return true;
         }
 
-        return $field === ContributionField::SupportCoordination
-            ? self::coordinationSee($user, $group)
-            : self::clinicalSee($user, $group);
+        return $field->isClinical()
+            ? self::clinicalSee($user, $group)
+            : self::coordinationSee($user, $group);
     }
 
     public static function writesField(User $user, Group $group, ContributionField $field): bool
@@ -172,9 +172,18 @@ class Scope
             return true;
         }
 
-        return $field === ContributionField::SupportCoordination
-            ? self::coordinationWrite($user, $group)
-            : self::clinicalWrite($user, $group);
+        if ($field->isClinical()) {
+            return self::clinicalWrite($user, $group);
+        }
+
+        if ($field === ContributionField::SupportCoordination) {
+            return self::coordinationWrite($user, $group);
+        }
+
+        return self::isAdmin($user)
+            || self::isPsicologia($user)
+            || self::emcInSection($user, $group)
+            || self::isDirector($user, $group);
     }
 
     /** Estrategias/aportes/compromisos propios o del alcance de quien los creó. */

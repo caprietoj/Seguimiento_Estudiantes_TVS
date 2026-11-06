@@ -746,7 +746,7 @@ export default function FichaEstudiante(props: FichaProps) {
                     </Section>
 
                     {internalSupports.length > 0 ? (
-                        <Section id="f-ai" title="Apoyos internos (Dpto. de apoyo)" badge="Confidencial">
+                        <Section id="f-ai" title="Apoyos internos (apoyo al aprendizaje)" badge="Confidencial">
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 {internalSupports.map((area) => (
                                     <div key={area.field}>
@@ -760,7 +760,7 @@ export default function FichaEstudiante(props: FichaProps) {
                             </div>
                         </Section>
                     ) : (
-                        <LockedSection id="f-ai" title="Apoyos internos (Dpto. de apoyo)" who="Psicología y Coordinación de la sección" />
+                        <LockedSection id="f-ai" title="Apoyos internos (apoyo al aprendizaje)" who="Psicología y Coordinación de la sección" />
                     )}
 
                     {externalSupports ? (

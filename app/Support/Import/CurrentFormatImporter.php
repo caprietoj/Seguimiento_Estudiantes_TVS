@@ -44,6 +44,8 @@ class CurrentFormatImporter extends Importer
         'support_ot' => ['terapia ocupacional', 't o', 'to'],
         'support_neuro' => ['neuropsicologia'],
         'support_coordination' => ['coordinacion'],
+        'support_tutoring' => ['tutorias', 'tutoria'],
+        'support_other' => ['otros', 'otro'],
         'observation' => ['observacion', 'observaciones'],
     ];
 
@@ -57,6 +59,8 @@ class CurrentFormatImporter extends Importer
         'support_ot' => ContributionField::SupportOt,
         'support_neuro' => ContributionField::SupportNeuro,
         'support_coordination' => ContributionField::SupportCoordination,
+        'support_tutoring' => ContributionField::SupportTutoring,
+        'support_other' => ContributionField::SupportOther,
         'observation' => ContributionField::Observation,
     ];
 
