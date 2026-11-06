@@ -126,9 +126,11 @@ class Student extends Model
      *
      * @return Collection<int, string>
      */
-    public function responsibles()
+    public function responsibles(?array $followUpIds = null)
     {
-        $fromStrategies = $this->strategies()->whereNotNull('responsible')->where('responsible', '!=', '')->pluck('responsible');
+        $fromStrategies = $this->strategies()
+            ->when($followUpIds !== null, fn ($q) => $q->whereIn('follow_up_id', $followUpIds))
+            ->whereNotNull('responsible')->where('responsible', '!=', '')->pluck('responsible');
         $fromCommitments = $this->commitments()->whereNotNull('responsible')->where('responsible', '!=', '')->pluck('responsible');
 
         return $fromStrategies->merge($fromCommitments)->unique()->values();

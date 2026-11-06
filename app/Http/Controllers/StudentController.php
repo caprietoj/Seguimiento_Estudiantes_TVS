@@ -408,7 +408,7 @@ class StudentController extends Controller
             'canCreateStrategy' => Scope::inScope($user, $group),
             'groupStrategies' => $groupStrategies,
             'commitments' => $commitments,
-            'responsibles' => $student->responsibles(),
+            'responsibles' => $student->responsibles($followUpIds->all()),
             'internalSupports' => $internalSupports,
             'externalSupports' => $externalSupports,
             'performance' => $performance,

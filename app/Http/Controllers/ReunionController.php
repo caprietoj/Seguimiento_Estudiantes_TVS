@@ -98,8 +98,11 @@ class ReunionController extends Controller
             ->get()
             ->groupBy(fn ($c) => $c->student_id.'|'.$c->field->value);
 
+        $yearFollowUpIds = $followUps->pluck('id');
+
         $individualStrategies = Strategy::query()
             ->whereIn('student_id', $studentIds)
+            ->whereIn('follow_up_id', $yearFollowUpIds)
             ->where('type', 'individual')
             ->with(['reviews' => fn ($q) => $q->latest('reviewed_on')])
             ->get()
@@ -113,6 +116,7 @@ class ReunionController extends Controller
 
         $responsibleStrategies = Strategy::query()
             ->whereIn('student_id', $studentIds)
+            ->whereIn('follow_up_id', $yearFollowUpIds)
             ->whereNotNull('responsible')->where('responsible', '!=', '')
             ->get(['student_id', 'responsible'])
             ->groupBy('student_id');
