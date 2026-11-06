@@ -193,14 +193,21 @@ class CurrentFormatImporter extends Importer
 
             $hasContent = true;
 
-            $exists = Contribution::where('student_id', $student->id)
+            $existing = Contribution::withTrashed()
+                ->where('student_id', $student->id)
                 ->where('follow_up_id', $followUp->id)
                 ->where('field', $field->value)
                 ->where('body', $body)
-                ->exists();
+                ->first();
 
-            if ($exists) {
-                $report->count('Aportes que ya existían (omitidos)');
+            if ($existing !== null) {
+                if ($existing->trashed()) {
+                    $existing->restore();
+                    $report->count('Aportes restaurados');
+                    $added++;
+                } else {
+                    $report->count('Aportes que ya existían (omitidos)');
+                }
 
                 continue;
             }
@@ -222,12 +229,17 @@ class CurrentFormatImporter extends Importer
         $responsible = isset($columns['responsible']) ? trim($cells[$columns['responsible']] ?? '') : '';
 
         if ($strategyText !== '') {
-            $exists = Strategy::where('student_id', $student->id)
+            $existingStrategy = Strategy::withTrashed()
+                ->where('student_id', $student->id)
                 ->where('follow_up_id', $followUp->id)
                 ->where('body', $strategyText)
-                ->exists();
+                ->first();
 
-            if ($exists) {
+            if ($existingStrategy !== null && $existingStrategy->trashed()) {
+                $existingStrategy->restore();
+                $report->count('Estrategias restauradas');
+                $added++;
+            } elseif ($existingStrategy !== null) {
                 $report->count('Estrategias que ya existían (omitidas)');
             } else {
                 $strategy = new Strategy([
