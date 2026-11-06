@@ -181,6 +181,7 @@ class StudentController extends Controller
             'id' => $c->id,
             'body' => $c->body,
             'author_name' => $c->author->name,
+            'follow_up_id' => $c->follow_up_id,
             'follow_up_label' => $c->followUp->shortLabel(),
             'can_delete' => Scope::canDelete($user, $group, $c->author_id),
         ];
@@ -353,7 +354,12 @@ class StudentController extends Controller
             return $g && $g->level !== null && $g->level <= config('seguimiento.nivel_atencion', 3);
         })->count();
 
+        $canSeeObservations = Scope::seesField($user, $group, ContributionField::Observation);
         $canSeeConclusions = Scope::seesField($user, $group, ContributionField::Conclusion);
+
+        $followUpIdsWithData = $contributions->flatten(1)->pluck('follow_up_id')->unique();
+        $defaultFollowUpId = $followUps->last(fn ($f) => $followUpIdsWithData->contains($f->id))?->id
+            ?? $followUps->last()?->id;
 
         return [
             'student' => [
@@ -392,6 +398,9 @@ class StudentController extends Controller
             'canWriteImprovements' => Scope::writesField($user, $group, ContributionField::Improvement),
             'subjectAttentions' => $notesFor(ContributionField::SubjectAttention->value),
             'canWriteSubjectAttentions' => Scope::writesField($user, $group, ContributionField::SubjectAttention),
+            'observations' => $canSeeObservations ? $notesFor(ContributionField::Observation->value) : [],
+            'canSeeObservations' => $canSeeObservations,
+            'canWriteObservations' => Scope::writesField($user, $group, ContributionField::Observation),
             'conclusions' => $canSeeConclusions ? $notesFor(ContributionField::Conclusion->value) : [],
             'canSeeConclusions' => $canSeeConclusions,
             'canWriteConclusions' => Scope::writesField($user, $group, ContributionField::Conclusion),
@@ -412,7 +421,7 @@ class StudentController extends Controller
                 'attention_subjects' => $attentionCount,
             ],
             'followUpOptions' => $followUps->map(fn ($f) => ['id' => $f->id, 'label' => $f->label()])->values(),
-            'defaultFollowUpId' => $followUps->last()?->id,
+            'defaultFollowUpId' => $defaultFollowUpId,
         ];
     }
 

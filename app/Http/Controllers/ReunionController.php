@@ -27,7 +27,24 @@ class ReunionController extends Controller
     public function show(Request $request, ?Group $group = null, ?int $followUpId = null): Response
     {
         $user = $request->user();
-        $schoolYear = SchoolYear::where('is_active', true)->firstOrFail();
+
+        if ($group === null && $request->integer('grupo') > 0) {
+            $group = Group::find($request->integer('grupo'));
+        }
+
+        $schoolYears = SchoolYear::orderByDesc('starts_on')->get();
+        $activeYear = $schoolYears->firstWhere('is_active', true) ?? $schoolYears->first();
+        abort_if($activeYear === null, 404);
+
+        if ($group !== null) {
+            $schoolYear = $schoolYears->firstWhere('id', $group->school_year_id)
+                ?? SchoolYear::findOrFail($group->school_year_id);
+        } else {
+            $requestedYear = $request->integer('anio');
+            $schoolYear = $requestedYear > 0
+                ? ($schoolYears->firstWhere('id', $requestedYear) ?? $activeYear)
+                : $activeYear;
+        }
 
         $visibleGroups = Scope::visibleGroups($user, $schoolYear->id);
 
@@ -36,15 +53,26 @@ class ReunionController extends Controller
         }
 
         if ($group === null) {
-            return Inertia::render('reunion/sin-grupos');
+            return Inertia::render('reunion/sin-grupos', [
+                'schoolYears' => $schoolYears->map(fn (SchoolYear $y) => ['id' => $y->id, 'name' => $y->name])->values(),
+                'selectedYearId' => $schoolYear->id,
+            ]);
         }
 
         Gate::authorize('view', $group);
 
         $followUps = $schoolYear->followUps()->orderBy('period')->orderBy('number')->get();
+
+        $groupStudentIds = $group->students()->pluck('students.id');
+        $followUpIdsWithData = Contribution::whereIn('student_id', $groupStudentIds)
+            ->pluck('follow_up_id')
+            ->unique();
+        $defaultFollowUp = $followUps->last(fn ($f) => $followUpIdsWithData->contains($f->id))
+            ?? $followUps->first();
+
         $followUp = $followUpId
             ? $followUps->firstWhere('id', $followUpId)
-            : $followUps->first();
+            : $defaultFollowUp;
         abort_if($followUp === null, 404);
 
         $meeting = $group->groupMeetings()->where('follow_up_id', $followUp->id)->first();
@@ -203,6 +231,8 @@ class ReunionController extends Controller
 
         return Inertia::render('reunion/show', [
             'schoolYear' => ['id' => $schoolYear->id, 'name' => $schoolYear->name],
+            'schoolYears' => $schoolYears->map(fn (SchoolYear $y) => ['id' => $y->id, 'name' => $y->name])->values(),
+            'selectedYearId' => $schoolYear->id,
             'groups' => $visibleGroups->map(fn (Group $g) => ['id' => $g->id, 'code' => $g->code, 'section' => $g->section->name])->values(),
             'followUps' => $followUps->map(fn ($f) => ['id' => $f->id, 'label' => $f->label()])->values(),
             'group' => [

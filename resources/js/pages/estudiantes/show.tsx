@@ -10,6 +10,7 @@ interface Note {
     id: number;
     body: string;
     author_name: string;
+    follow_up_id: number;
     follow_up_label: string;
     can_delete: boolean;
 }
@@ -127,6 +128,9 @@ interface FichaProps {
     canWriteImprovements: boolean;
     subjectAttentions?: Note[];
     canWriteSubjectAttentions?: boolean;
+    observations?: Note[];
+    canSeeObservations?: boolean;
+    canWriteObservations?: boolean;
     conclusions?: Note[];
     canSeeConclusions?: boolean;
     canWriteConclusions?: boolean;
@@ -305,6 +309,9 @@ export default function FichaEstudiante(props: FichaProps) {
         canWriteImprovements,
         subjectAttentions = [],
         canWriteSubjectAttentions = false,
+        observations = [],
+        canSeeObservations = false,
+        canWriteObservations = false,
         conclusions = [],
         canSeeConclusions = false,
         canWriteConclusions = false,
@@ -326,6 +333,8 @@ export default function FichaEstudiante(props: FichaProps) {
 
     const [currentFollowUpId, setCurrentFollowUpId] = useState<number | null>(defaultFollowUpId);
     const activeFollowUpId = currentFollowUpId ?? defaultFollowUpId;
+    const notesForFollowUp = (notes: Note[]) =>
+        activeFollowUpId ? notes.filter((n) => n.follow_up_id === activeFollowUpId) : notes;
 
     const photoForm = useForm<{ photo: File | null }>({ photo: null });
     const strategyForm = useForm({
@@ -367,6 +376,7 @@ export default function FichaEstudiante(props: FichaProps) {
     const jumpTargets = [
         ['f-fort', 'Fortalezas'],
         ['f-mej', 'Aspectos de mejora'],
+        ['f-obs', 'Observación'],
         ['f-concl', 'Conclusión'],
         ['f-ei', 'Estrategias individuales'],
         ['f-eg', 'Estrategias grupales'],
@@ -618,9 +628,20 @@ export default function FichaEstudiante(props: FichaProps) {
                         )}
                     </Section>
 
+                    {canSeeObservations ? (
+                        <Section id="f-obs" title="Observación">
+                            <NoteList notes={notesForFollowUp(observations)} onDelete={(id) => router.delete(`/aportes/${id}`, { preserveScroll: true })} />
+                            {canWriteObservations && activeFollowUpId && (
+                                <AddNoteForm studentId={student.id} field="observation" followUpId={activeFollowUpId} label="Agregar" />
+                            )}
+                        </Section>
+                    ) : (
+                        <LockedSection id="f-obs" title="Observación" who="Coordinación y dirección de grupo" />
+                    )}
+
                     {canSeeConclusions ? (
                         <Section id="f-concl" title="Conclusión">
-                            <NoteList notes={conclusions} onDelete={(id) => router.delete(`/aportes/${id}`, { preserveScroll: true })} />
+                            <NoteList notes={notesForFollowUp(conclusions)} onDelete={(id) => router.delete(`/aportes/${id}`, { preserveScroll: true })} />
                             {canWriteConclusions && activeFollowUpId && (
                                 <AddNoteForm studentId={student.id} field="conclusion" followUpId={activeFollowUpId} label="Agregar" />
                             )}
@@ -769,7 +790,7 @@ export default function FichaEstudiante(props: FichaProps) {
                                 {internalSupports.map((area) => (
                                     <div key={area.field}>
                                         <h4 className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{area.label}</h4>
-                                        <NoteList notes={area.notes} onDelete={(id) => router.delete(`/aportes/${id}`, { preserveScroll: true })} />
+                                        <NoteList notes={notesForFollowUp(area.notes)} onDelete={(id) => router.delete(`/aportes/${id}`, { preserveScroll: true })} />
                                         {area.can_write && activeFollowUpId && (
                                             <AddNoteForm studentId={student.id} field={area.field} followUpId={activeFollowUpId} label="Agregar" />
                                         )}

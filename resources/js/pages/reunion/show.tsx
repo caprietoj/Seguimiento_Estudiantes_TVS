@@ -116,6 +116,8 @@ interface GroupStrategy {
 
 interface ReunionProps {
     schoolYear: { id: number; name: string };
+    schoolYears: { id: number; name: string }[];
+    selectedYearId: number;
     groups: { id: number; code: string; section: string }[];
     followUps: { id: number; label: string }[];
     group: { id: number; code: string; grade: number; section: string; director_name: string | null };
@@ -922,7 +924,7 @@ function getColumnIcon(key: string, type: string, support?: boolean) {
 }
 
 export default function ReunionShow(props: ReunionProps) {
-    const { schoolYear, groups, followUps, group, followUp, meeting, can, stats, groupStrategies, columns, hiddenAreas, students } = props;
+    const { schoolYear, schoolYears, selectedYearId, groups, followUps, group, followUp, meeting, can, stats, groupStrategies, columns, hiddenAreas, students } = props;
 
     const meetingForm = useForm({ held_on: meeting?.held_on ?? '' });
 
@@ -1061,8 +1063,20 @@ export default function ReunionShow(props: ReunionProps) {
                         <div className="flex flex-wrap items-center gap-2">
                             <select
                                 className="border-border bg-background focus:ring-primary rounded-md border px-2.5 py-1 text-xs font-semibold focus:ring-1 focus:outline-none"
+                                value={selectedYearId}
+                                onChange={(e) => router.get('/reunion', { anio: e.target.value })}
+                            >
+                                {schoolYears.map((y) => (
+                                    <option key={y.id} value={y.id}>
+                                        {y.name}
+                                    </option>
+                                ))}
+                            </select>
+
+                            <select
+                                className="border-border bg-background focus:ring-primary rounded-md border px-2.5 py-1 text-xs font-semibold focus:ring-1 focus:outline-none"
                                 value={group.id}
-                                onChange={(e) => navigate(Number(e.target.value), followUp.id)}
+                                onChange={(e) => router.get('/reunion', { anio: selectedYearId, grupo: e.target.value })}
                             >
                                 {groups.map((g) => (
                                     <option key={g.id} value={g.id}>
