@@ -85,7 +85,7 @@ class ReunionController extends Controller
         $studentIds = $students->pluck('id');
 
         $groupSubjects = Subject::active()
-            ->forGrade($group->grade)
+            ->forGroup($group, $schoolYear->id)
             ->orderBy('name')
             ->pluck('name')
             ->values()

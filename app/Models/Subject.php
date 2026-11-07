@@ -78,4 +78,24 @@ class Subject extends Model
                 ->orWhereIn('id', DB::table('grade_subject')->select('subject_id')->where('grade', $grade));
         });
     }
+
+    /**
+     * Asignaturas activas asignadas al grupo en el año escolar dado. Si el grupo aún no
+     * tiene asignaciones en ese año, se usa el criterio por grado.
+     *
+     * @param  Builder<Subject>  $query
+     * @return Builder<Subject>
+     */
+    public function scopeForGroup(Builder $query, Group $group, int $schoolYearId): Builder
+    {
+        $assignments = TeachingAssignment::query()
+            ->where('group_id', $group->id)
+            ->where('school_year_id', $schoolYearId);
+
+        if (! (clone $assignments)->exists()) {
+            return $query->forGrade($group->grade);
+        }
+
+        return $query->whereIn('id', (clone $assignments)->select('subject_id'));
+    }
 }

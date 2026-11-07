@@ -268,7 +268,7 @@ class StudentController extends Controller
             ];
         }
 
-        $subjects = Subject::active()->forGrade($group->grade)->orderBy('name')->get();
+        $subjects = Subject::active()->forGroup($group, $selectedYear->id)->orderBy('name')->get();
         $gradesByKey = $student->grades()->where('school_year_id', $selectedYear->id)->get()
             ->keyBy(fn ($g) => $g->subject_id.'|'.$g->period);
         $ibPeriods = (int) Setting::get('ib_periodos', config('seguimiento.periodos', 3));
