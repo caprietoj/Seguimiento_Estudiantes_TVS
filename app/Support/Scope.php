@@ -258,8 +258,13 @@ class Scope
 
     public static function canViewStudent(User $user, Student $student): bool
     {
-        $group = $student->currentGroup();
+        if (self::isAdmin($user)) {
+            return true;
+        }
 
-        return $group !== null && self::inScope($user, $group);
+        return $student->enrollments()->with('group')->get()
+            ->pluck('group')
+            ->filter()
+            ->contains(fn (Group $group) => self::inScope($user, $group));
     }
 }

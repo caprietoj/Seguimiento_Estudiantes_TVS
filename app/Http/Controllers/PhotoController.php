@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SchoolYear;
 use App\Models\Student;
 use App\Support\Scope;
 use App\Support\StudentPhoto;
@@ -19,7 +20,16 @@ class PhotoController extends Controller
 {
     public function store(Request $request, Student $student): RedirectResponse
     {
-        $group = $student->currentGroup();
+        $yearId = $request->integer('anio');
+        $year = $yearId > 0 ? SchoolYear::find($yearId) : null;
+
+        $group = $student->enrollmentFor($year)?->group;
+
+        $group ??= $student->enrollments()->with('group')->get()
+            ->pluck('group')
+            ->filter()
+            ->first(fn ($candidate) => Scope::photoWrite($request->user(), $candidate));
+
         abort_if($group === null, 422, 'El estudiante no tiene matrícula vigente.');
 
         if (! Scope::photoWrite($request->user(), $group)) {
@@ -42,10 +52,7 @@ class PhotoController extends Controller
 
     public function show(Request $request, Student $student): Response
     {
-        $group = $student->currentGroup();
-        abort_if($group === null, 404);
-
-        if (! Scope::inScope($request->user(), $group)) {
+        if (! Scope::canViewStudent($request->user(), $student)) {
             abort(403);
         }
 

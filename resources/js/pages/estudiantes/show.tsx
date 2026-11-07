@@ -336,7 +336,7 @@ export default function FichaEstudiante(props: FichaProps) {
     const notesForFollowUp = (notes: Note[]) =>
         activeFollowUpId ? notes.filter((n) => n.follow_up_id === activeFollowUpId) : notes;
 
-    const photoForm = useForm<{ photo: File | null }>({ photo: null });
+    const photoForm = useForm<{ photo: File | null; anio: number | null }>({ photo: null, anio: selectedYearId });
     const strategyForm = useForm({
         type: 'individual',
         student_id: student.id,

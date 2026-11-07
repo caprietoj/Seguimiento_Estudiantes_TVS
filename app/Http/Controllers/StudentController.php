@@ -82,7 +82,11 @@ class StudentController extends Controller
             $activeYearId = SchoolYear::where('is_active', true)->value('id');
 
             return Inertia::render('estudiantes/sin-matricula', [
-                'student' => ['id' => $student->id, 'full_name' => $student->full_name],
+                'student' => [
+                    'id' => $student->id,
+                    'full_name' => $student->full_name,
+                    'photo_url' => $student->photo_path ? route('fotos.show', $student) : null,
+                ],
                 'schoolYears' => $schoolYears->map(fn (SchoolYear $y) => ['id' => $y->id, 'name' => $y->name])->values(),
                 'selectedYearId' => $activeYearId ?? $schoolYears->first()?->id,
             ]);
@@ -163,6 +167,8 @@ class StudentController extends Controller
         if ($group === null) {
             return null;
         }
+
+        abort_unless(Scope::inScope($user, $group), 403);
 
         $siblings = $group->students()->orderBy('full_name')->get();
         $idx = $siblings->search(fn (Student $s) => $s->id === $student->id);
