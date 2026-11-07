@@ -124,6 +124,7 @@ class Student extends Model
      * Responsables de la ficha: se arma a partir de las estrategias y los compromisos
      * activos/abiertos del estudiante (sección 5).
      *
+     * @param  int[]|null  $followUpIds
      * @return Collection<int, string>
      */
     public function responsibles(?array $followUpIds = null)

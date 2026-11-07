@@ -364,8 +364,9 @@ class StudentController extends Controller
         $canSeeConclusions = Scope::seesField($user, $group, ContributionField::Conclusion);
 
         $followUpIdsWithData = $contributions->flatten(1)->pluck('follow_up_id')->unique();
-        $defaultFollowUpId = $followUps->last(fn ($f) => $followUpIdsWithData->contains($f->id))?->id
-            ?? $followUps->last()?->id;
+        $defaultFollowUp = $followUps->last(fn ($f) => $followUpIdsWithData->contains($f->id))
+            ?? $followUps->last();
+        $defaultFollowUpId = $defaultFollowUp?->id;
 
         return [
             'student' => [
