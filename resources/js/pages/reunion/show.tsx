@@ -345,14 +345,9 @@ function AddSubjectNoteForm({
     };
 
     return (
-        <form
-            className="border-primary/40 bg-card flex flex-col gap-2 rounded-lg border p-2.5 shadow-sm text-xs"
-            onSubmit={handleSubmit}
-        >
+        <form className="border-primary/40 bg-card flex flex-col gap-2 rounded-lg border p-2.5 text-xs shadow-sm" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-primary uppercase tracking-wider">
-                    Asignatura
-                </label>
+                <label className="text-primary text-[10px] font-bold tracking-wider uppercase">Asignatura</label>
                 <select
                     className="border-border bg-background focus:ring-primary w-full rounded-md border px-2 py-1 text-xs focus:ring-1 focus:outline-none"
                     value={selectedSubject}
@@ -380,9 +375,7 @@ function AddSubjectNoteForm({
             </div>
 
             <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                    Observación pedagógica
-                </label>
+                <label className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">Observación pedagógica</label>
                 <textarea
                     required
                     value={bodyText}
@@ -413,15 +406,7 @@ function AddSubjectNoteForm({
     );
 }
 
-function SubjectAttentionCard({
-    note,
-    gradesAlert,
-    onDelete,
-}: {
-    note: Note;
-    gradesAlert: AsignaturaItem[];
-    onDelete: () => void;
-}) {
+function SubjectAttentionCard({ note, gradesAlert, onDelete }: { note: Note; gradesAlert: AsignaturaItem[]; onDelete: () => void }) {
     const match = note.body.match(/^([^:\n]{2,45}):\s*([\s\S]+)$/);
     const subjectName = match ? match[1].trim() : null;
     const observationText = match ? match[2].trim() : note.body;
@@ -440,12 +425,12 @@ function SubjectAttentionCard({
             <div className="flex items-center justify-between gap-1.5">
                 <div className="flex flex-wrap items-center gap-1.5">
                     {subjectName ? (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10.5px] font-bold text-primary">
+                        <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10.5px] font-bold">
                             <BookOpen className="size-3" />
                             {subjectName}
                         </span>
                     ) : (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[10.5px] font-semibold text-muted-foreground">
+                        <span className="bg-muted text-muted-foreground inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold">
                             <GraduationCap className="size-3" />
                             General
                         </span>
@@ -454,10 +439,10 @@ function SubjectAttentionCard({
                     {matchedGrade && (
                         <span
                             className={
-                                'inline-flex items-center gap-0.5 rounded px-1.5 py-0.2 text-[10px] font-bold ' +
+                                'py-0.2 inline-flex items-center gap-0.5 rounded px-1.5 text-[10px] font-bold ' +
                                 (matchedGrade.level <= 2
-                                    ? 'bg-red-100 text-red-700 border border-red-200'
-                                    : 'bg-amber-100 text-amber-800 border border-amber-200')
+                                    ? 'border border-red-200 bg-red-100 text-red-700'
+                                    : 'border border-amber-200 bg-amber-100 text-amber-800')
                             }
                             title={`Nivel ${matchedGrade.level} en evaluación oficial`}
                         >
@@ -470,9 +455,7 @@ function SubjectAttentionCard({
                 {note.can_delete && <DeleteButton onConfirm={onDelete} />}
             </div>
 
-            <p className="text-foreground/90 leading-relaxed whitespace-pre-wrap text-[11px]">
-                {observationText}
-            </p>
+            <p className="text-foreground/90 text-[11px] leading-relaxed whitespace-pre-wrap">{observationText}</p>
 
             <div className="text-muted-foreground mt-0.5 flex items-center justify-between border-t border-black/5 pt-1 text-[10px]">
                 <span className="truncate">
@@ -484,15 +467,7 @@ function SubjectAttentionCard({
     );
 }
 
-function SubjectAttentionCell({
-    studentId,
-    followUpId,
-    data,
-}: {
-    studentId: number;
-    followUpId: number;
-    data: SubjectAttentionCellData;
-}) {
+function SubjectAttentionCell({ studentId, followUpId, data }: { studentId: number; followUpId: number; data: SubjectAttentionCellData }) {
     const [adding, setAdding] = useState(false);
     const [preselectedSubject, setPreselectedSubject] = useState('');
 
@@ -529,22 +504,20 @@ function SubjectAttentionCell({
 
             {uncoveredAlerts.length > 0 && (
                 <div className="rounded-md border border-amber-200 bg-amber-50/70 p-1.5 text-xs">
-                    <span className="text-[10px] font-bold text-amber-900 block mb-1">
-                        ⚠️ Calificaciones ≤ 3 sin observación:
-                    </span>
+                    <span className="mb-1 block text-[10px] font-bold text-amber-900">⚠️ Calificaciones ≤ 3 sin observación:</span>
                     <div className="flex flex-wrap gap-1">
                         {uncoveredAlerts.map((a) => (
                             <button
                                 key={a.subject}
                                 type="button"
                                 onClick={() => openWithSubject(a.subject)}
-                                className="inline-flex items-center gap-1 rounded bg-amber-100/90 hover:bg-amber-200 border border-amber-300 px-1.5 py-0.5 text-[10.5px] font-semibold text-amber-900 transition cursor-pointer"
+                                className="inline-flex cursor-pointer items-center gap-1 rounded border border-amber-300 bg-amber-100/90 px-1.5 py-0.5 text-[10.5px] font-semibold text-amber-900 transition hover:bg-amber-200"
                                 title="Clic para registrar aporte para esta asignatura"
                             >
                                 <span>{a.subject}</span>
                                 <span
                                     className={
-                                        'size-3.5 rounded text-[9px] text-white flex items-center justify-center font-bold ' +
+                                        'flex size-3.5 items-center justify-center rounded text-[9px] font-bold text-white ' +
                                         (a.level <= 2 ? 'bg-red-600' : 'bg-amber-600')
                                     }
                                 >
@@ -562,8 +535,8 @@ function SubjectAttentionCell({
             )}
 
             {notes.length === 0 && gradesAlert.length === 0 && data.can_write && !adding && (
-                <div className="flex items-center gap-1 text-[11px] text-emerald-700 font-medium pb-1">
-                    <CheckCircle2 className="size-3 text-emerald-600 shrink-0" />
+                <div className="flex items-center gap-1 pb-1 text-[11px] font-medium text-emerald-700">
+                    <CheckCircle2 className="size-3 shrink-0 text-emerald-600" />
                     <span>Al día (sin alertas ≤ 3)</span>
                 </div>
             )}
@@ -588,7 +561,7 @@ function SubjectAttentionCell({
                                 setPreselectedSubject('');
                                 setAdding(true);
                             }}
-                            className="text-primary hover:border-primary/80 hover:bg-primary/5 border-primary/40 inline-flex items-center gap-1 self-start rounded-md border border-dashed px-2 py-1 text-[11px] font-semibold transition cursor-pointer"
+                            className="text-primary hover:border-primary/80 hover:bg-primary/5 border-primary/40 inline-flex cursor-pointer items-center gap-1 self-start rounded-md border border-dashed px-2 py-1 text-[11px] font-semibold transition"
                         >
                             <Plus className="size-3" />
                             Añadir observación de asignatura
@@ -924,7 +897,22 @@ function getColumnIcon(key: string, type: string, support?: boolean) {
 }
 
 export default function ReunionShow(props: ReunionProps) {
-    const { schoolYear, schoolYears, selectedYearId, groups, followUps, group, followUp, meeting, can, stats, groupStrategies, columns, hiddenAreas, students } = props;
+    const {
+        schoolYear,
+        schoolYears,
+        selectedYearId,
+        groups,
+        followUps,
+        group,
+        followUp,
+        meeting,
+        can,
+        stats,
+        groupStrategies,
+        columns,
+        hiddenAreas,
+        students,
+    } = props;
 
     const meetingForm = useForm({ held_on: meeting?.held_on ?? '' });
 

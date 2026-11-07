@@ -169,10 +169,12 @@ function lvlClass(level: number | null | undefined) {
 function mapLevelClass(level: string | null | undefined) {
     if (!level) return 'bg-muted/50 text-muted-foreground border-transparent';
     if (level === 'low') return 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-900';
-    if (level === 'low_average') return 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-900';
+    if (level === 'low_average')
+        return 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-900';
     if (level === 'average') return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-900';
     if (level === 'high_average') return 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-900';
-    if (level === 'high') return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900';
+    if (level === 'high')
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900';
 
     return 'bg-muted/50 text-muted-foreground border-transparent';
 }
@@ -333,8 +335,7 @@ export default function FichaEstudiante(props: FichaProps) {
 
     const [currentFollowUpId, setCurrentFollowUpId] = useState<number | null>(defaultFollowUpId);
     const activeFollowUpId = currentFollowUpId ?? defaultFollowUpId;
-    const notesForFollowUp = (notes: Note[]) =>
-        activeFollowUpId ? notes.filter((n) => n.follow_up_id === activeFollowUpId) : notes;
+    const notesForFollowUp = (notes: Note[]) => (activeFollowUpId ? notes.filter((n) => n.follow_up_id === activeFollowUpId) : notes);
 
     const photoForm = useForm<{ photo: File | null; anio: number | null }>({ photo: null, anio: selectedYearId });
     const strategyForm = useForm({
@@ -630,7 +631,10 @@ export default function FichaEstudiante(props: FichaProps) {
 
                     {canSeeObservations ? (
                         <Section id="f-obs" title="Observación">
-                            <NoteList notes={notesForFollowUp(observations)} onDelete={(id) => router.delete(`/aportes/${id}`, { preserveScroll: true })} />
+                            <NoteList
+                                notes={notesForFollowUp(observations)}
+                                onDelete={(id) => router.delete(`/aportes/${id}`, { preserveScroll: true })}
+                            />
                             {canWriteObservations && activeFollowUpId && (
                                 <AddNoteForm studentId={student.id} field="observation" followUpId={activeFollowUpId} label="Agregar" />
                             )}
@@ -641,7 +645,10 @@ export default function FichaEstudiante(props: FichaProps) {
 
                     {canSeeConclusions ? (
                         <Section id="f-concl" title="Conclusión">
-                            <NoteList notes={notesForFollowUp(conclusions)} onDelete={(id) => router.delete(`/aportes/${id}`, { preserveScroll: true })} />
+                            <NoteList
+                                notes={notesForFollowUp(conclusions)}
+                                onDelete={(id) => router.delete(`/aportes/${id}`, { preserveScroll: true })}
+                            />
                             {canWriteConclusions && activeFollowUpId && (
                                 <AddNoteForm studentId={student.id} field="conclusion" followUpId={activeFollowUpId} label="Agregar" />
                             )}
@@ -790,7 +797,10 @@ export default function FichaEstudiante(props: FichaProps) {
                                 {internalSupports.map((area) => (
                                     <div key={area.field}>
                                         <h4 className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{area.label}</h4>
-                                        <NoteList notes={notesForFollowUp(area.notes)} onDelete={(id) => router.delete(`/aportes/${id}`, { preserveScroll: true })} />
+                                        <NoteList
+                                            notes={notesForFollowUp(area.notes)}
+                                            onDelete={(id) => router.delete(`/aportes/${id}`, { preserveScroll: true })}
+                                        />
                                         {area.can_write && activeFollowUpId && (
                                             <AddNoteForm studentId={student.id} field={area.field} followUpId={activeFollowUpId} label="Agregar" />
                                         )}
@@ -948,18 +958,18 @@ export default function FichaEstudiante(props: FichaProps) {
                         </div>
 
                         {/* ── Pruebas estandarizadas MAP Growth (NWEA) ── */}
-                        <div className="mt-6 border-t border-border pt-5">
+                        <div className="border-border mt-6 border-t pt-5">
                             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                                 <div>
-                                    <h4 className="text-xs font-semibold tracking-wide text-primary uppercase">
+                                    <h4 className="text-primary text-xs font-semibold tracking-wide uppercase">
                                         Pruebas estandarizadas MAP Growth (NWEA)
                                     </h4>
-                                    <p className="text-[11px] text-muted-foreground">
+                                    <p className="text-muted-foreground text-[11px]">
                                         Progreso académico estandarizado · Escala RIT y Percentil normativo
                                     </p>
                                 </div>
                                 {mapPerformance?.can_write && (
-                                    <span className="text-[11px] text-muted-foreground bg-muted/70 px-2 py-0.5 rounded">
+                                    <span className="text-muted-foreground bg-muted/70 rounded px-2 py-0.5 text-[11px]">
                                         Haz clic en una celda para registrar o editar
                                     </span>
                                 )}
@@ -971,14 +981,16 @@ export default function FichaEstudiante(props: FichaProps) {
                                         <tr className="text-muted-foreground text-left text-[11px] uppercase">
                                             <th className="pb-1.5">Área evaluada</th>
                                             {Array.from({ length: mapPerformance?.periods_count ?? 2 }, (_, i) => i + 1).map((p) => (
-                                                <th key={p} className="pb-1.5 text-center">Periodo {p}</th>
+                                                <th key={p} className="pb-1.5 text-center">
+                                                    Periodo {p}
+                                                </th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {mapPerformance?.items.map((row) => (
                                             <tr key={row.subject} className="border-border border-t">
-                                                <td className="py-2.5 font-medium text-xs text-foreground/90">{row.label}</td>
+                                                <td className="text-foreground/90 py-2.5 text-xs font-medium">{row.label}</td>
                                                 {Array.from({ length: mapPerformance?.periods_count ?? 2 }, (_, i) => ({
                                                     p: i + 1,
                                                     label: `Periodo ${i + 1}`,
@@ -987,7 +999,7 @@ export default function FichaEstudiante(props: FichaProps) {
                                                     const hasData = sc && (sc.rit_score !== null || sc.percentile !== null || sc.level !== null);
 
                                                     return (
-                                                        <td key={p} className="py-2 px-1 text-center">
+                                                        <td key={p} className="px-1 py-2 text-center">
                                                             {mapPerformance?.can_write ? (
                                                                 <button
                                                                     type="button"
@@ -1002,7 +1014,7 @@ export default function FichaEstudiante(props: FichaProps) {
                                                                             level: sc?.level ?? '',
                                                                         })
                                                                     }
-                                                                    className="group mx-auto flex min-h-[46px] w-full max-w-[130px] flex-col items-center justify-center rounded-md border border-dashed border-border/80 p-1.5 transition-all hover:border-primary/50 hover:bg-accent/50"
+                                                                    className="group border-border/80 hover:border-primary/50 hover:bg-accent/50 mx-auto flex min-h-[46px] w-full max-w-[130px] flex-col items-center justify-center rounded-md border border-dashed p-1.5 transition-all"
                                                                     title="Clic para registrar o editar calificación MAP"
                                                                 >
                                                                     {hasData ? (
@@ -1010,24 +1022,34 @@ export default function FichaEstudiante(props: FichaProps) {
                                                                             <div className="font-mono text-xs font-semibold">
                                                                                 {sc.rit_score !== null && (
                                                                                     <span>
-                                                                                        {sc.rit_score} <span className="text-[10px] text-muted-foreground font-normal">RIT</span>
+                                                                                        {sc.rit_score}{' '}
+                                                                                        <span className="text-muted-foreground text-[10px] font-normal">
+                                                                                            RIT
+                                                                                        </span>
                                                                                     </span>
                                                                                 )}
                                                                                 {sc.rit_score !== null && sc.percentile !== null && (
-                                                                                    <span className="mx-1 text-muted-foreground font-normal">·</span>
+                                                                                    <span className="text-muted-foreground mx-1 font-normal">·</span>
                                                                                 )}
                                                                                 {sc.percentile !== null && (
-                                                                                    <span className="text-muted-foreground text-[11px] font-normal">P{sc.percentile}</span>
+                                                                                    <span className="text-muted-foreground text-[11px] font-normal">
+                                                                                        P{sc.percentile}
+                                                                                    </span>
                                                                                 )}
                                                                             </div>
                                                                             {sc.level_short && (
-                                                                                <span className={'mt-0.5 inline-flex items-center rounded border px-1.5 py-0.2 text-[10px] font-medium ' + mapLevelClass(sc.level)}>
+                                                                                <span
+                                                                                    className={
+                                                                                        'py-0.2 mt-0.5 inline-flex items-center rounded border px-1.5 text-[10px] font-medium ' +
+                                                                                        mapLevelClass(sc.level)
+                                                                                    }
+                                                                                >
                                                                                     {sc.level_short}
                                                                                 </span>
                                                                             )}
                                                                         </>
                                                                     ) : (
-                                                                        <span className="text-xs text-muted-foreground/60 group-hover:text-primary">
+                                                                        <span className="text-muted-foreground/60 group-hover:text-primary text-xs">
                                                                             + Registrar
                                                                         </span>
                                                                     )}
@@ -1039,18 +1061,28 @@ export default function FichaEstudiante(props: FichaProps) {
                                                                             <div className="font-mono text-xs font-semibold">
                                                                                 {sc.rit_score !== null && (
                                                                                     <span>
-                                                                                        {sc.rit_score} <span className="text-[10px] text-muted-foreground font-normal">RIT</span>
+                                                                                        {sc.rit_score}{' '}
+                                                                                        <span className="text-muted-foreground text-[10px] font-normal">
+                                                                                            RIT
+                                                                                        </span>
                                                                                     </span>
                                                                                 )}
                                                                                 {sc.rit_score !== null && sc.percentile !== null && (
-                                                                                    <span className="mx-1 text-muted-foreground font-normal">·</span>
+                                                                                    <span className="text-muted-foreground mx-1 font-normal">·</span>
                                                                                 )}
                                                                                 {sc.percentile !== null && (
-                                                                                    <span className="text-muted-foreground text-[11px] font-normal">P{sc.percentile}</span>
+                                                                                    <span className="text-muted-foreground text-[11px] font-normal">
+                                                                                        P{sc.percentile}
+                                                                                    </span>
                                                                                 )}
                                                                             </div>
                                                                             {sc.level_short && (
-                                                                                <span className={'mt-0.5 inline-flex items-center rounded border px-1.5 py-0.2 text-[10px] font-medium ' + mapLevelClass(sc.level)}>
+                                                                                <span
+                                                                                    className={
+                                                                                        'py-0.2 mt-0.5 inline-flex items-center rounded border px-1.5 text-[10px] font-medium ' +
+                                                                                        mapLevelClass(sc.level)
+                                                                                    }
+                                                                                >
                                                                                     {sc.level_short}
                                                                                 </span>
                                                                             )}
@@ -1069,35 +1101,41 @@ export default function FichaEstudiante(props: FichaProps) {
                                 </table>
                             </div>
 
-                            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
-                                <span className="font-medium text-foreground">Quintiles NWEA:</span>
+                            <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px]">
+                                <span className="text-foreground font-medium">Quintiles NWEA:</span>
                                 <span className="inline-flex items-center gap-1">
-                                    <span className={'rounded border px-1 py-0.2 text-[10px] font-medium ' + mapLevelClass('high')}>Alto</span> &gt; 80%
+                                    <span className={'py-0.2 rounded border px-1 text-[10px] font-medium ' + mapLevelClass('high')}>Alto</span> &gt;
+                                    80%
                                 </span>
                                 <span className="inline-flex items-center gap-1">
-                                    <span className={'rounded border px-1 py-0.2 text-[10px] font-medium ' + mapLevelClass('high_average')}>Prom. alto</span> 61–80%
+                                    <span className={'py-0.2 rounded border px-1 text-[10px] font-medium ' + mapLevelClass('high_average')}>
+                                        Prom. alto
+                                    </span>{' '}
+                                    61–80%
                                 </span>
                                 <span className="inline-flex items-center gap-1">
-                                    <span className={'rounded border px-1 py-0.2 text-[10px] font-medium ' + mapLevelClass('average')}>Promedio</span> 41–60%
+                                    <span className={'py-0.2 rounded border px-1 text-[10px] font-medium ' + mapLevelClass('average')}>Promedio</span>{' '}
+                                    41–60%
                                 </span>
                                 <span className="inline-flex items-center gap-1">
-                                    <span className={'rounded border px-1 py-0.2 text-[10px] font-medium ' + mapLevelClass('low_average')}>Prom. bajo</span> 21–40%
+                                    <span className={'py-0.2 rounded border px-1 text-[10px] font-medium ' + mapLevelClass('low_average')}>
+                                        Prom. bajo
+                                    </span>{' '}
+                                    21–40%
                                 </span>
                                 <span className="inline-flex items-center gap-1">
-                                    <span className={'rounded border px-1 py-0.2 text-[10px] font-medium ' + mapLevelClass('low')}>Bajo</span> &lt; 21%
+                                    <span className={'py-0.2 rounded border px-1 text-[10px] font-medium ' + mapLevelClass('low')}>Bajo</span> &lt;
+                                    21%
                                 </span>
                             </div>
                         </div>
 
                         {subjectAttentions.length > 0 && (
-                            <div className="mt-4 border-t border-border pt-3">
-                                <h4 className="mb-2 text-xs font-semibold tracking-wide text-primary uppercase">
+                            <div className="border-border mt-4 border-t pt-3">
+                                <h4 className="text-primary mb-2 text-xs font-semibold tracking-wide uppercase">
                                     Asignaturas para tener en cuenta · Observaciones pedagógicas
                                 </h4>
-                                <NoteList
-                                    notes={subjectAttentions}
-                                    onDelete={(id) => router.delete(`/aportes/${id}`, { preserveScroll: true })}
-                                />
+                                <NoteList notes={subjectAttentions} onDelete={(id) => router.delete(`/aportes/${id}`, { preserveScroll: true })} />
                             </div>
                         )}
 
@@ -1339,7 +1377,7 @@ export default function FichaEstudiante(props: FichaProps) {
                                         value={editingMap.rit}
                                         onChange={(e) => setEditingMap({ ...editingMap, rit: e.target.value })}
                                     />
-                                    <p className="text-[10px] text-muted-foreground">Escala Rasch Unit (100–350)</p>
+                                    <p className="text-muted-foreground text-[10px]">Escala Rasch Unit (100–350)</p>
                                 </div>
                                 <div className="space-y-1.5">
                                     <Label htmlFor="map-percentile">Percentil (1–99)</Label>
@@ -1364,7 +1402,7 @@ export default function FichaEstudiante(props: FichaProps) {
                                             setEditingMap({ ...editingMap, percentile: val, level: suggestedLevel });
                                         }}
                                     />
-                                    <p className="text-[10px] text-muted-foreground">Rango normativo (1–99)</p>
+                                    <p className="text-muted-foreground text-[10px]">Rango normativo (1–99)</p>
                                 </div>
                             </div>
 
@@ -1372,7 +1410,7 @@ export default function FichaEstudiante(props: FichaProps) {
                                 <Label htmlFor="map-level">Nivel de desempeño (Quintil NWEA)</Label>
                                 <select
                                     id="map-level"
-                                    className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+                                    className="border-input bg-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm shadow-xs focus-visible:ring-1 focus-visible:outline-hidden"
                                     value={editingMap.level}
                                     onChange={(e) => setEditingMap({ ...editingMap, level: e.target.value })}
                                 >

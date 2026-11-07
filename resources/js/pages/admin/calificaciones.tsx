@@ -66,10 +66,7 @@ export default function AdminCalificaciones({ config, flash }: Props) {
 
     const addArea = () => {
         const baseKey = `area_${form.data.map_areas.length + 1}`;
-        form.setData('map_areas', [
-            ...form.data.map_areas,
-            { key: baseKey, name: 'Nueva Área', active: true },
-        ]);
+        form.setData('map_areas', [...form.data.map_areas, { key: baseKey, name: 'Nueva Área', active: true }]);
     };
 
     const removeArea = (index: number) => {
@@ -103,12 +100,12 @@ export default function AdminCalificaciones({ config, flash }: Props) {
                 </div>
             )}
 
-            <form onSubmit={submit} className="space-y-6 max-w-4xl">
+            <form onSubmit={submit} className="max-w-4xl space-y-6">
                 {/* ── Bloque 1: Desempeño Académico Regular (IB) ── */}
-                <div className="rounded-lg border border-border bg-card p-5 shadow-xs">
-                    <div className="mb-4 border-b border-border pb-3">
-                        <h2 className="text-base font-semibold text-foreground">Desempeño académico · Escala IB</h2>
-                        <p className="text-xs text-muted-foreground">
+                <div className="border-border bg-card rounded-lg border p-5 shadow-xs">
+                    <div className="border-border mb-4 border-b pb-3">
+                        <h2 className="text-foreground text-base font-semibold">Desempeño académico · Escala IB</h2>
+                        <p className="text-muted-foreground text-xs">
                             Configuración de la escala numérica de calificaciones por periodo y límites de alerta temprana.
                         </p>
                     </div>
@@ -124,8 +121,8 @@ export default function AdminCalificaciones({ config, flash }: Props) {
                                 value={form.data.ib_escala_min}
                                 onChange={(e) => form.setData('ib_escala_min', parseInt(e.target.value) || 1)}
                             />
-                            {form.errors.ib_escala_min && <p className="text-xs text-destructive">{form.errors.ib_escala_min}</p>}
-                            <p className="text-[11px] text-muted-foreground">Normalmente 1</p>
+                            {form.errors.ib_escala_min && <p className="text-destructive text-xs">{form.errors.ib_escala_min}</p>}
+                            <p className="text-muted-foreground text-[11px]">Normalmente 1</p>
                         </div>
 
                         <div className="space-y-1.5">
@@ -138,8 +135,8 @@ export default function AdminCalificaciones({ config, flash }: Props) {
                                 value={form.data.ib_escala_max}
                                 onChange={(e) => form.setData('ib_escala_max', parseInt(e.target.value) || 7)}
                             />
-                            {form.errors.ib_escala_max && <p className="text-xs text-destructive">{form.errors.ib_escala_max}</p>}
-                            <p className="text-[11px] text-muted-foreground">Normalmente 7 (escala IB)</p>
+                            {form.errors.ib_escala_max && <p className="text-destructive text-xs">{form.errors.ib_escala_max}</p>}
+                            <p className="text-muted-foreground text-[11px]">Normalmente 7 (escala IB)</p>
                         </div>
 
                         <div className="space-y-1.5">
@@ -152,8 +149,8 @@ export default function AdminCalificaciones({ config, flash }: Props) {
                                 value={form.data.ib_nivel_atencion}
                                 onChange={(e) => form.setData('ib_nivel_atencion', parseInt(e.target.value) || 3)}
                             />
-                            {form.errors.ib_nivel_atencion && <p className="text-xs text-destructive">{form.errors.ib_nivel_atencion}</p>}
-                            <p className="text-[11px] text-muted-foreground">Nivel ≤ a este marca alerta</p>
+                            {form.errors.ib_nivel_atencion && <p className="text-destructive text-xs">{form.errors.ib_nivel_atencion}</p>}
+                            <p className="text-muted-foreground text-[11px]">Nivel ≤ a este marca alerta</p>
                         </div>
 
                         <div className="space-y-1.5">
@@ -166,17 +163,17 @@ export default function AdminCalificaciones({ config, flash }: Props) {
                                 value={form.data.ib_periodos}
                                 onChange={(e) => form.setData('ib_periodos', parseInt(e.target.value) || 3)}
                             />
-                            {form.errors.ib_periodos && <p className="text-xs text-destructive">{form.errors.ib_periodos}</p>}
-                            <p className="text-[11px] text-muted-foreground">Típicamente 3 periodos</p>
+                            {form.errors.ib_periodos && <p className="text-destructive text-xs">{form.errors.ib_periodos}</p>}
+                            <p className="text-muted-foreground text-[11px]">Típicamente 3 periodos</p>
                         </div>
                     </div>
                 </div>
 
                 {/* ── Bloque 2: Pruebas estandarizadas MAP Growth (NWEA) ── */}
-                <div className="rounded-lg border border-border bg-card p-5 shadow-xs space-y-6">
-                    <div className="border-b border-border pb-3">
-                        <h2 className="text-base font-semibold text-foreground">Pruebas estandarizadas MAP Growth (NWEA)</h2>
-                        <p className="text-xs text-muted-foreground">
+                <div className="border-border bg-card space-y-6 rounded-lg border p-5 shadow-xs">
+                    <div className="border-border border-b pb-3">
+                        <h2 className="text-foreground text-base font-semibold">Pruebas estandarizadas MAP Growth (NWEA)</h2>
+                        <p className="text-muted-foreground text-xs">
                             Áreas evaluadas, frecuencia de aplicación y percentiles normativos para la asignación de quintiles.
                         </p>
                     </div>
@@ -185,10 +182,8 @@ export default function AdminCalificaciones({ config, flash }: Props) {
                     <div>
                         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                             <div>
-                                <h3 className="text-xs font-semibold uppercase tracking-wide text-primary">
-                                    Áreas evaluadas de MAP Growth
-                                </h3>
-                                <p className="text-[11px] text-muted-foreground">
+                                <h3 className="text-primary text-xs font-semibold tracking-wide uppercase">Áreas evaluadas de MAP Growth</h3>
+                                <p className="text-muted-foreground text-[11px]">
                                     Configura las materias o dimensiones evaluadas en la prueba MAP (ej. Matemáticas, Lectura, Ciencias).
                                 </p>
                             </div>
@@ -204,45 +199,38 @@ export default function AdminCalificaciones({ config, flash }: Props) {
                                     <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
                                     Restaurar estándar NWEA
                                 </Button>
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    className="h-7 text-xs"
-                                    onClick={addArea}
-                                >
+                                <Button type="button" size="sm" className="h-7 text-xs" onClick={addArea}>
                                     <Plus className="mr-1.5 h-3.5 w-3.5" />
                                     Agregar área
                                 </Button>
                             </div>
                         </div>
 
-                        {form.errors.map_areas && (
-                            <p className="mb-2 text-xs text-destructive">{form.errors.map_areas}</p>
-                        )}
+                        {form.errors.map_areas && <p className="text-destructive mb-2 text-xs">{form.errors.map_areas}</p>}
 
-                        <div className="overflow-x-auto rounded-md border border-border">
+                        <div className="border-border overflow-x-auto rounded-md border">
                             <table className="w-full text-sm">
                                 <thead>
-                                    <tr className="border-b border-border bg-muted/50 text-[11px] uppercase tracking-wider text-muted-foreground text-left">
-                                        <th className="py-2 px-3 text-center w-16">Activa</th>
-                                        <th className="py-2 px-3">Nombre legible / Etiqueta</th>
-                                        <th className="py-2 px-3 w-48">Identificador (Clave)</th>
-                                        <th className="py-2 px-3 text-center w-16">Acción</th>
+                                    <tr className="border-border bg-muted/50 text-muted-foreground border-b text-left text-[11px] tracking-wider uppercase">
+                                        <th className="w-16 px-3 py-2 text-center">Activa</th>
+                                        <th className="px-3 py-2">Nombre legible / Etiqueta</th>
+                                        <th className="w-48 px-3 py-2">Identificador (Clave)</th>
+                                        <th className="w-16 px-3 py-2 text-center">Acción</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-border">
+                                <tbody className="divide-border divide-y">
                                     {form.data.map_areas.map((area, idx) => (
                                         <tr key={idx} className={area.active ? 'bg-card' : 'bg-muted/20 opacity-70'}>
-                                            <td className="py-2 px-3 text-center align-middle">
+                                            <td className="px-3 py-2 text-center align-middle">
                                                 <input
                                                     type="checkbox"
                                                     checked={area.active}
                                                     onChange={(e) => updateArea(idx, 'active', e.target.checked)}
-                                                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                                                    className="border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer rounded"
                                                     title={area.active ? 'Área activa en la ficha' : 'Área inactiva (no se mostrará en la ficha)'}
                                                 />
                                             </td>
-                                            <td className="py-2 px-3 align-middle">
+                                            <td className="px-3 py-2 align-middle">
                                                 <Input
                                                     value={area.name}
                                                     onChange={(e) => updateArea(idx, 'name', e.target.value)}
@@ -250,26 +238,20 @@ export default function AdminCalificaciones({ config, flash }: Props) {
                                                     className="h-8 text-xs"
                                                 />
                                             </td>
-                                            <td className="py-2 px-3 align-middle">
+                                            <td className="px-3 py-2 align-middle">
                                                 <Input
                                                     value={area.key}
-                                                    onChange={(e) =>
-                                                        updateArea(
-                                                            idx,
-                                                            'key',
-                                                            e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''),
-                                                        )
-                                                    }
+                                                    onChange={(e) => updateArea(idx, 'key', e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
                                                     placeholder="ej: math"
-                                                    className="h-8 text-xs font-mono"
+                                                    className="h-8 font-mono text-xs"
                                                 />
                                             </td>
-                                            <td className="py-2 px-3 text-center align-middle">
+                                            <td className="px-3 py-2 text-center align-middle">
                                                 <Button
                                                     type="button"
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-7 w-7"
                                                     onClick={() => removeArea(idx)}
                                                     disabled={form.data.map_areas.length <= 1}
                                                     title="Eliminar área"
@@ -282,13 +264,14 @@ export default function AdminCalificaciones({ config, flash }: Props) {
                                 </tbody>
                             </table>
                         </div>
-                        <p className="mt-1.5 text-[11px] text-muted-foreground">
-                            * El identificador se usa internamente para la vinculación de registros y la importación masiva. Solo letras minúsculas, números y guiones.
+                        <p className="text-muted-foreground mt-1.5 text-[11px]">
+                            * El identificador se usa internamente para la vinculación de registros y la importación masiva. Solo letras minúsculas,
+                            números y guiones.
                         </p>
                     </div>
 
                     {/* 2.2 Frecuencia anual */}
-                    <div className="pt-2 border-t border-border">
+                    <div className="border-border border-t pt-2">
                         <div className="max-w-xs space-y-1.5">
                             <Label htmlFor="map_periodos">Evaluaciones al año (Periodos)</Label>
                             <Input
@@ -299,14 +282,14 @@ export default function AdminCalificaciones({ config, flash }: Props) {
                                 value={form.data.map_periodos}
                                 onChange={(e) => form.setData('map_periodos', parseInt(e.target.value) || 2)}
                             />
-                            {form.errors.map_periodos && <p className="text-xs text-destructive">{form.errors.map_periodos}</p>}
-                            <p className="text-[11px] text-muted-foreground">Actualmente configurado en 2 veces al año</p>
+                            {form.errors.map_periodos && <p className="text-destructive text-xs">{form.errors.map_periodos}</p>}
+                            <p className="text-muted-foreground text-[11px]">Actualmente configurado en 2 veces al año</p>
                         </div>
                     </div>
 
                     {/* 2.3 Cortes normativos */}
-                    <div className="pt-2 border-t border-border">
-                        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-primary">Cortes normativos de percentiles (1–99)</h3>
+                    <div className="border-border border-t pt-2">
+                        <h3 className="text-primary mb-2 text-xs font-semibold tracking-wide uppercase">Cortes normativos de percentiles (1–99)</h3>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
                             <div className="space-y-1.5">
                                 <Label htmlFor="map_corte_bajo">Corte Bajo (&lt;)</Label>
@@ -318,8 +301,8 @@ export default function AdminCalificaciones({ config, flash }: Props) {
                                     value={form.data.map_corte_bajo}
                                     onChange={(e) => form.setData('map_corte_bajo', parseInt(e.target.value) || 21)}
                                 />
-                                {form.errors.map_corte_bajo && <p className="text-xs text-destructive">{form.errors.map_corte_bajo}</p>}
-                                <p className="text-[11px] text-muted-foreground">&lt; {form.data.map_corte_bajo}% = Bajo</p>
+                                {form.errors.map_corte_bajo && <p className="text-destructive text-xs">{form.errors.map_corte_bajo}</p>}
+                                <p className="text-muted-foreground text-[11px]">&lt; {form.data.map_corte_bajo}% = Bajo</p>
                             </div>
 
                             <div className="space-y-1.5">
@@ -332,8 +315,12 @@ export default function AdminCalificaciones({ config, flash }: Props) {
                                     value={form.data.map_corte_promedio_bajo}
                                     onChange={(e) => form.setData('map_corte_promedio_bajo', parseInt(e.target.value) || 40)}
                                 />
-                                {form.errors.map_corte_promedio_bajo && <p className="text-xs text-destructive">{form.errors.map_corte_promedio_bajo}</p>}
-                                <p className="text-[11px] text-muted-foreground">{form.data.map_corte_bajo}–{form.data.map_corte_promedio_bajo}% = Prom. bajo</p>
+                                {form.errors.map_corte_promedio_bajo && (
+                                    <p className="text-destructive text-xs">{form.errors.map_corte_promedio_bajo}</p>
+                                )}
+                                <p className="text-muted-foreground text-[11px]">
+                                    {form.data.map_corte_bajo}–{form.data.map_corte_promedio_bajo}% = Prom. bajo
+                                </p>
                             </div>
 
                             <div className="space-y-1.5">
@@ -346,8 +333,10 @@ export default function AdminCalificaciones({ config, flash }: Props) {
                                     value={form.data.map_corte_promedio}
                                     onChange={(e) => form.setData('map_corte_promedio', parseInt(e.target.value) || 60)}
                                 />
-                                {form.errors.map_corte_promedio && <p className="text-xs text-destructive">{form.errors.map_corte_promedio}</p>}
-                                <p className="text-[11px] text-muted-foreground">{form.data.map_corte_promedio_bajo + 1}–{form.data.map_corte_promedio}% = Promedio</p>
+                                {form.errors.map_corte_promedio && <p className="text-destructive text-xs">{form.errors.map_corte_promedio}</p>}
+                                <p className="text-muted-foreground text-[11px]">
+                                    {form.data.map_corte_promedio_bajo + 1}–{form.data.map_corte_promedio}% = Promedio
+                                </p>
                             </div>
 
                             <div className="space-y-1.5">
@@ -360,26 +349,33 @@ export default function AdminCalificaciones({ config, flash }: Props) {
                                     value={form.data.map_corte_promedio_alto}
                                     onChange={(e) => form.setData('map_corte_promedio_alto', parseInt(e.target.value) || 80)}
                                 />
-                                {form.errors.map_corte_promedio_alto && <p className="text-xs text-destructive">{form.errors.map_corte_promedio_alto}</p>}
-                                <p className="text-[11px] text-muted-foreground">&gt; {form.data.map_corte_promedio_alto}% = Alto</p>
+                                {form.errors.map_corte_promedio_alto && (
+                                    <p className="text-destructive text-xs">{form.errors.map_corte_promedio_alto}</p>
+                                )}
+                                <p className="text-muted-foreground text-[11px]">&gt; {form.data.map_corte_promedio_alto}% = Alto</p>
                             </div>
                         </div>
 
                         {/* Previsualización visual de los quintiles */}
-                        <div className="mt-4 rounded-md border border-border/80 bg-muted/40 p-3">
-                            <span className="text-[11px] font-semibold text-foreground uppercase tracking-wider block mb-2">Escala resultante de quintiles:</span>
+                        <div className="border-border/80 bg-muted/40 mt-4 rounded-md border p-3">
+                            <span className="text-foreground mb-2 block text-[11px] font-semibold tracking-wider uppercase">
+                                Escala resultante de quintiles:
+                            </span>
                             <div className="flex flex-wrap gap-2 text-xs">
                                 <span className="inline-flex items-center gap-1.5 rounded border border-rose-200 bg-rose-50 px-2 py-1 text-rose-800 dark:border-rose-900 dark:bg-rose-950/60 dark:text-rose-200">
                                     <span className="font-semibold">Bajo:</span> &lt; {form.data.map_corte_bajo}%
                                 </span>
                                 <span className="inline-flex items-center gap-1.5 rounded border border-orange-200 bg-orange-50 px-2 py-1 text-orange-800 dark:border-orange-900 dark:bg-orange-950/60 dark:text-orange-200">
-                                    <span className="font-semibold">Promedio bajo:</span> {form.data.map_corte_bajo}–{form.data.map_corte_promedio_bajo}%
+                                    <span className="font-semibold">Promedio bajo:</span> {form.data.map_corte_bajo}–
+                                    {form.data.map_corte_promedio_bajo}%
                                 </span>
                                 <span className="inline-flex items-center gap-1.5 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800 dark:border-amber-900 dark:bg-amber-950/60 dark:text-amber-200">
-                                    <span className="font-semibold">Promedio:</span> {form.data.map_corte_promedio_bajo + 1}–{form.data.map_corte_promedio}%
+                                    <span className="font-semibold">Promedio:</span> {form.data.map_corte_promedio_bajo + 1}–
+                                    {form.data.map_corte_promedio}%
                                 </span>
                                 <span className="inline-flex items-center gap-1.5 rounded border border-teal-200 bg-teal-50 px-2 py-1 text-teal-800 dark:border-teal-900 dark:bg-teal-950/60 dark:text-teal-200">
-                                    <span className="font-semibold">Promedio alto:</span> {form.data.map_corte_promedio + 1}–{form.data.map_corte_promedio_alto}%
+                                    <span className="font-semibold">Promedio alto:</span> {form.data.map_corte_promedio + 1}–
+                                    {form.data.map_corte_promedio_alto}%
                                 </span>
                                 <span className="inline-flex items-center gap-1.5 rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200">
                                     <span className="font-semibold">Alto:</span> &gt; {form.data.map_corte_promedio_alto}%
