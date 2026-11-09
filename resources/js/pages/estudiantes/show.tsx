@@ -113,6 +113,7 @@ interface FichaProps {
     schoolYear: string;
     schoolYears: { id: number; name: string }[];
     selectedYearId: number;
+    aviso?: string;
     groups: { id: number; code: string; section: string }[];
     nav: {
         index: number | null;
@@ -302,6 +303,7 @@ export default function FichaEstudiante(props: FichaProps) {
         schoolYear,
         schoolYears,
         selectedYearId,
+        aviso,
         groups,
         nav,
         can,
@@ -536,6 +538,14 @@ export default function FichaEstudiante(props: FichaProps) {
                     Exportar a PDF
                 </a>
             </div>
+
+            {aviso === 'sin-matricula' && (
+                <div className="border-warn bg-warn-soft text-warn mb-4 rounded-md border p-3 text-sm">
+                    {`El estudiante seleccionado no tenía matrícula en ${
+                        schoolYears.find((y) => y.id === selectedYearId)?.name ?? 'el año seleccionado'
+                    }. Se abrió el primer curso disponible de ese año.`}
+                </div>
+            )}
 
             <div className="grid grid-cols-1 items-start gap-4 pb-10 md:grid-cols-[280px_minmax(0,1fr)]">
                 <aside className="border-border bg-card sticky top-4 flex flex-col gap-3 rounded-lg border p-4">

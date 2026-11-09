@@ -64,14 +64,19 @@ class StudentController extends Controller
         $student = $group->students()->orderBy('full_name')->first();
         abort_if($student === null, 404, 'El grupo no tiene estudiantes matriculados.');
 
-        return redirect()->route('estudiantes.show', ['student' => $student, 'anio' => $selectedYear->id]);
+        $params = ['student' => $student, 'anio' => $selectedYear->id];
+        if ($request->filled('aviso')) {
+            $params['aviso'] = $request->string('aviso')->toString();
+        }
+
+        return redirect()->route('estudiantes.show', $params);
     }
 
     /**
      * Ficha del estudiante (sección 6.2): se alimenta durante todo el año escolar. Cada
      * sección no permitida para el rol se muestra como un bloque "Restringido".
      */
-    public function show(Request $request, Student $student): Response
+    public function show(Request $request, Student $student): Response|RedirectResponse
     {
         Gate::authorize('view', $student);
 
@@ -79,7 +84,42 @@ class StudentController extends Controller
 
         if ($data === null) {
             $schoolYears = SchoolYear::orderByDesc('starts_on')->get();
-            $activeYearId = SchoolYear::where('is_active', true)->value('id');
+            $activeYear = $schoolYears->firstWhere('is_active', true) ?? $schoolYears->first();
+            abort_if($activeYear === null, 404);
+
+            $requestedYearId = $request->integer('anio');
+            $selectedYear = $requestedYearId > 0
+                ? ($schoolYears->firstWhere('id', $requestedYearId) ?? $activeYear)
+                : $activeYear;
+
+            // Si el estudiante no tiene matrícula en el año elegido, abrimos el primer
+            // curso de su misma sección que sí existió en ese año (como hace Reunión).
+            $fallbackGroups = $this->visibleGroupsWithStudents($request->user(), $selectedYear);
+            $currentEnrollment = $student->enrollments()
+                ->with('group')
+                ->where('school_year_id', '!=', $selectedYear->id)
+                ->orderByDesc('school_year_id')
+                ->first();
+            $currentGroup = $currentEnrollment?->group;
+
+            $fallbackGroup = null;
+            if ($currentGroup !== null) {
+                $sectionId = $currentGroup->section_id;
+                $grade = $currentGroup->grade;
+                $fallbackGroup = $fallbackGroups
+                    ->where('section_id', $sectionId)
+                    ->sortBy(fn (Group $g) => abs($g->grade - $grade))
+                    ->first();
+            }
+            $fallbackGroup ??= $fallbackGroups->first();
+
+            if ($fallbackGroup !== null) {
+                return redirect()->route('estudiantes.index', [
+                    'anio' => $selectedYear->id,
+                    'grupo' => $fallbackGroup->id,
+                    'aviso' => 'sin-matricula',
+                ]);
+            }
 
             return Inertia::render('estudiantes/sin-matricula', [
                 'student' => [
@@ -88,9 +128,11 @@ class StudentController extends Controller
                     'photo_url' => $student->photo_path ? route('fotos.show', $student) : null,
                 ],
                 'schoolYears' => $schoolYears->map(fn (SchoolYear $y) => ['id' => $y->id, 'name' => $y->name])->values(),
-                'selectedYearId' => $activeYearId ?? $schoolYears->first()?->id,
+                'selectedYearId' => $selectedYear->id,
             ]);
         }
+
+        $data['aviso'] = $request->string('aviso')->toString();
 
         return Inertia::render('estudiantes/show', $data);
     }
