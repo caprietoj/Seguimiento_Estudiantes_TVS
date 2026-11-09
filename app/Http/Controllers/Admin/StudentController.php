@@ -82,7 +82,7 @@ class StudentController extends Controller
                     'institutional_code' => $s->institutional_code,
                     'full_name' => $s->full_name,
                     'active' => (bool) $s->active,
-                    'photo_url' => $s->photo_path ? route('fotos.show', $s) : null,
+                    'photo_url' => $s->photoThumbUrl(),
                     'group_id' => $enrollment?->group_id,
                     'group_code' => $enrollment?->group?->code,
                 ];

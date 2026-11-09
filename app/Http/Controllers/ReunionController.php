@@ -225,7 +225,7 @@ class ReunionController extends Controller
                 'id' => $student->id,
                 'full_name' => $student->full_name,
                 'institutional_code' => $student->institutional_code,
-                'photo_url' => $student->photo_path ? route('fotos.show', $student) : null,
+                'photo_url' => $student->photoThumbUrl(),
                 'late_commitments' => ($lateByStudent->get($student->id) ?? collect())->count(),
                 'disciplinary_open' => ($disciplinaryOpenByStudent->get($student->id) ?? collect())->count(),
                 'attention_subjects_count' => $attentionCount,

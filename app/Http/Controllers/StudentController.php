@@ -125,7 +125,7 @@ class StudentController extends Controller
                 'student' => [
                     'id' => $student->id,
                     'full_name' => $student->full_name,
-                    'photo_url' => $student->photo_path ? route('fotos.show', $student) : null,
+                    'photo_url' => $student->photoThumbUrl(),
                 ],
                 'schoolYears' => $schoolYears->map(fn (SchoolYear $y) => ['id' => $y->id, 'name' => $y->name])->values(),
                 'selectedYearId' => $selectedYear->id,

@@ -46,6 +46,7 @@ class PhotoController extends Controller
         Storage::disk('local')->put($path, $jpeg);
 
         $student->update(['photo_path' => $path]);
+        Storage::disk('local')->delete(StudentPhoto::thumbPath($student->id));
 
         return back();
     }
@@ -61,5 +62,32 @@ class PhotoController extends Controller
         return response(Storage::disk('local')->get($student->photo_path), 200)
             ->header('Content-Type', 'image/jpeg')
             ->header('Cache-Control', 'private, max-age=3600');
+    }
+
+    public function thumb(Request $request, Student $student): Response
+    {
+        if (! Scope::canViewStudent($request->user(), $student)) {
+            abort(403);
+        }
+
+        abort_unless($student->photo_path && Storage::disk('local')->exists($student->photo_path), 404);
+
+        $thumbPath = StudentPhoto::thumbPath($student->id);
+        $sourceModified = Storage::disk('local')->lastModified($student->photo_path);
+
+        if (! Storage::disk('local')->exists($thumbPath)
+            || Storage::disk('local')->lastModified($thumbPath) < $sourceModified) {
+            $jpeg = StudentPhoto::squareJpeg(
+                Storage::disk('local')->get($student->photo_path),
+                StudentPhoto::THUMB_SIZE,
+            );
+            abort_if($jpeg === null, 422, 'No se pudo leer la imagen.');
+            Storage::disk('local')->put($thumbPath, $jpeg);
+        }
+
+        return response(Storage::disk('local')->get($thumbPath), 200)
+            ->header('Content-Type', 'image/jpeg')
+            ->header('Cache-Control', 'private, max-age=86400')
+            ->header('Last-Modified', gmdate('D, d M Y H:i:s', Storage::disk('local')->lastModified($thumbPath)).' GMT');
     }
 }

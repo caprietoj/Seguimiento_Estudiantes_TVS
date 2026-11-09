@@ -10,8 +10,16 @@ class StudentPhoto
 {
     public const SIZE = 480;
 
+    /** Tamaño de la miniatura usada en listados y avatares. */
+    public const THUMB_SIZE = 96;
+
+    public static function thumbPath(int $studentId): string
+    {
+        return "fotos/thumbs/{$studentId}.jpg";
+    }
+
     /** Devuelve el JPEG cuadrado, o null si el contenido no es una imagen válida. */
-    public static function squareJpeg(string $contents): ?string
+    public static function squareJpeg(string $contents, int $size = self::SIZE): ?string
     {
         if ($contents === '') {
             return null;
@@ -29,8 +37,8 @@ class StudentPhoto
         $srcX = (int) (($width - $side) / 2);
         $srcY = (int) (($height - $side) / 2);
 
-        $square = imagecreatetruecolor(self::SIZE, self::SIZE);
-        imagecopyresampled($square, $image, 0, 0, $srcX, $srcY, self::SIZE, self::SIZE, $side, $side);
+        $square = imagecreatetruecolor($size, $size);
+        imagecopyresampled($square, $image, 0, 0, $srcX, $srcY, $size, $size, $side, $side);
 
         ob_start();
         imagejpeg($square, null, 82);

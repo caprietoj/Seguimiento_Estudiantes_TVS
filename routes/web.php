@@ -51,6 +51,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('estudiantes/{student}/pdf', [StudentController::class, 'exportPdf'])->name('estudiantes.pdf');
     Route::post('estudiantes/{student}/foto', [PhotoController::class, 'store'])->name('fotos.store');
     Route::get('estudiantes/{student}/foto', [PhotoController::class, 'show'])->name('fotos.show');
+    Route::get('estudiantes/{student}/foto/thumb', [PhotoController::class, 'thumb'])->name('fotos.thumb');
 
     Route::get('compromisos', [CompromisosController::class, 'index'])->name('compromisos.index');
     Route::post('compromisos', [CommitmentController::class, 'store'])->name('compromisos.store');

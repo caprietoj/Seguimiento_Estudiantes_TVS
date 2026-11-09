@@ -66,6 +66,7 @@ class FetchPhidiasPhotos implements ShouldQueue
 
             Storage::disk('local')->put(self::pathFor($student->id), $jpeg);
             $student->update(['photo_path' => self::pathFor($student->id)]);
+            Storage::disk('local')->delete(StudentPhoto::thumbPath($student->id));
             $done++;
         }
 
@@ -96,6 +97,7 @@ class FetchPhidiasPhotos implements ShouldQueue
         }
 
         Storage::disk('local')->delete($path);
+        Storage::disk('local')->delete(StudentPhoto::thumbPath($studentId));
         $student->update(['photo_path' => null]);
 
         return true;

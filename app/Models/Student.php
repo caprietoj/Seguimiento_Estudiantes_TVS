@@ -101,6 +101,19 @@ class Student extends Model
         return $this->enrollmentFor()?->group;
     }
 
+    /** Miniatura para listados/avatares; la versión invalida el cache al cambiar la foto. */
+    public function photoThumbUrl(): ?string
+    {
+        if (! $this->photo_path) {
+            return null;
+        }
+
+        return route('fotos.thumb', [
+            'student' => $this->id,
+            'v' => $this->updated_at->timestamp,
+        ]);
+    }
+
     /**
      * Asignaturas a tener en cuenta en un periodo: toda asignatura con nivel <= al umbral
      * configurado (config('seguimiento.nivel_atencion')). No se almacena: se calcula.
