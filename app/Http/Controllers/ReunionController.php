@@ -163,7 +163,7 @@ class ReunionController extends Controller
                     $list = ($contributions->get($student->id.'|'.$col['key']) ?? collect())->map(fn (Contribution $c) => [
                         'id' => $c->id,
                         'body' => $c->body,
-                        'author_name' => $c->author->name,
+                        'author_name' => $c->authorLabel(),
                         'author_role' => $roleLabel($c->author),
                         'can_delete' => Scope::canDelete($user, $group, $c->author_id),
                     ])->values();
@@ -177,7 +177,7 @@ class ReunionController extends Controller
                     $notes = ($contributions->get($student->id.'|'.$field->value) ?? collect())->map(fn (Contribution $c) => [
                         'id' => $c->id,
                         'body' => $c->body,
-                        'author_name' => $c->author->name,
+                        'author_name' => $c->authorLabel(),
                         'author_role' => $roleLabel($c->author),
                         'can_delete' => Scope::canDelete($user, $group, $c->author_id),
                     ])->values();

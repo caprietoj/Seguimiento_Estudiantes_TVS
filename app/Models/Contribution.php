@@ -47,4 +47,10 @@ class Contribution extends Model
     {
         return $this->belongsTo(ImportBatch::class);
     }
+
+    /** Los aportes importados se muestran como "Administrador", no con el nombre de quien importó. */
+    public function authorLabel(): string
+    {
+        return $this->import_batch_id !== null ? 'Administrador' : $this->author->name;
+    }
 }

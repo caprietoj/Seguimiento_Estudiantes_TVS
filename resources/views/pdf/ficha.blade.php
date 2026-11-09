@@ -92,19 +92,21 @@
         .kpi-label { font-size: 7pt; color: #5e636e; margin-top: 3pt; }
 
         /* ── Secciones ── */
-        .section { margin-top: 16pt; }
-        .sec-head { border-bottom: 1pt solid #364a72; padding-bottom: 3pt; margin-bottom: 7pt; page-break-after: avoid; }
+        .section { margin-top: 12pt; }
+        .sec-head { border-bottom: 1pt solid #364a72; padding-bottom: 3pt; margin-bottom: 5pt; page-break-after: avoid; }
         .sec-num { display: inline-block; width: 18pt; color: #ee3338; font-size: 10pt; }
         .sec-title { display: inline; font-size: 10.5pt; color: #364a72; letter-spacing: 0.3pt; text-transform: uppercase; }
         .sec-tag { float: right; font-size: 6.5pt; letter-spacing: 1pt; color: #a9252a; margin-top: 2pt; }
         .sec-desc { font-size: 7.5pt; color: #5e636e; margin: -3pt 0 7pt 0; }
         .empty { font-size: 8.5pt; font-style: italic; color: #8a8f99; padding: 2pt 0 2pt 10pt; border-left: 2pt solid #e4e7ec; }
 
-        .note { border-left: 2pt solid #364a72; padding: 2pt 0 2pt 9pt; margin-bottom: 7pt; page-break-inside: avoid; }
+        .note { border-left: 2pt solid #364a72; padding: 2pt 0 2pt 8pt; margin-bottom: 5pt; page-break-inside: avoid; }
+        .note.long { page-break-inside: auto; }
         .note.red { border-left-color: #ee3338; }
         .note.grey { border-left-color: #8a8f99; }
-        .note-body { text-align: left; }
-        .note-meta { font-size: 7pt; color: #5e636e; margin-top: 2pt; }
+        .note-body { font-size: 8.6pt; line-height: 1.35; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; }
+        .note.long .note-body { font-size: 8pt; line-height: 1.28; }
+        .note-meta { font-size: 7pt; color: #5e636e; margin-top: 1pt; }
         .chip { display: inline-block; background: #ebeef4; color: #364a72; font-size: 6.5pt; padding: 0.5pt 4pt; border-radius: 2pt; margin-right: 3pt; }
 
         .tag { display: inline-block; font-size: 6.5pt; padding: 1pt 5pt; border-radius: 2pt; }
@@ -113,13 +115,15 @@
         .tag-crit { background: #fdeeee; color: #a9252a; }
         .tag-mute { background: #eef0f3; color: #5e636e; }
 
-        .strategy { border: 0.75pt solid #e4e7ec; border-radius: 3pt; padding: 7pt 9pt; margin-bottom: 7pt; page-break-inside: avoid; }
-        .strategy-body { font-size: 9pt; }
+        .strategy { border: 0.75pt solid #e4e7ec; border-radius: 3pt; padding: 6pt 8pt; margin-bottom: 5pt; page-break-inside: avoid; }
+        .strategy.long { page-break-inside: auto; }
+        .strategy-body { font-size: 8.6pt; line-height: 1.35; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; }
+        .strategy.long .strategy-body { font-size: 8pt; line-height: 1.28; }
         .reviews { margin-top: 5pt; }
-        .reviews td { font-size: 7.5pt; padding: 3pt 6pt 3pt 0; border-top: 0.5pt solid #eef0f3; }
+        .reviews td { font-size: 7.5pt; padding: 2pt 5pt 2pt 0; border-top: 0.5pt solid #eef0f3; }
 
         .grid th { font-size: 6.5pt; letter-spacing: 0.8pt; text-transform: uppercase; color: #5e636e; text-align: left; padding: 4pt 6pt; background: #f4f6f9; border-bottom: 0.75pt solid #d3d7df; font-weight: normal; }
-        .grid td { padding: 3.5pt 6pt; border-bottom: 0.5pt solid #e4e7ec; font-size: 8.5pt; }
+        .grid td { padding: 3.5pt 6pt; border-bottom: 0.5pt solid #e4e7ec; font-size: 8.5pt; word-wrap: break-word; overflow-wrap: break-word; }
         .grid tr { page-break-inside: avoid; }
         .center, .grid th.center { text-align: center; }
         .lvl { display: inline-block; width: 18pt; padding: 0.5pt 0; border-radius: 2pt; text-align: center; font-size: 8pt; }
@@ -250,7 +254,7 @@
     <div class="section">
         <div class="sec-head"><span class="sec-num semi">{{ $num() }}</span><h2 class="sec-title semi">Fortalezas y avances</h2></div>
         @forelse ($strengths as $n)
-            <div class="note">
+            <div class="note{{ mb_strlen($n['body']) > 280 ? ' long' : '' }}">
                 <div class="note-body">{{ $n['body'] }}</div>
                 <div class="note-meta"><span class="chip">{{ $n['follow_up_label'] }}</span>{{ $n['author_name'] }}</div>
             </div>
@@ -263,7 +267,7 @@
     <div class="section">
         <div class="sec-head"><span class="sec-num semi">{{ $num() }}</span><h2 class="sec-title semi">Aspectos de mejora</h2></div>
         @forelse ($improvements as $n)
-            <div class="note red">
+            <div class="note red{{ mb_strlen($n['body']) > 280 ? ' long' : '' }}">
                 <div class="note-body">{{ $n['body'] }}</div>
                 <div class="note-meta"><span class="chip">{{ $n['follow_up_label'] }}</span>{{ $n['author_name'] }}</div>
             </div>
@@ -367,7 +371,7 @@
         @if (count($subjectAttentions) > 0)
             <div class="area-title semi" style="margin-top: 10pt;">Asignaturas para tener en cuenta</div>
             @foreach ($subjectAttentions as $n)
-                <div class="note">
+                <div class="note{{ mb_strlen($n['body']) > 280 ? ' long' : '' }}">
                     <div class="note-body">{{ $n['body'] }}</div>
                     <div class="note-meta"><span class="chip">{{ $n['follow_up_label'] }}</span>{{ $n['author_name'] }}</div>
                 </div>
@@ -379,7 +383,7 @@
     <div class="section">
         <div class="sec-head"><span class="sec-num semi">{{ $num() }}</span><h2 class="sec-title semi">Estrategias individuales</h2></div>
         @forelse ($individualStrategies as $s)
-            <div class="strategy">
+            <div class="strategy{{ mb_strlen($s['body']) > 280 ? ' long' : '' }}">
                 <table>
                     <tr>
                         <td class="strategy-body">{{ $s['body'] }}</td>
@@ -406,7 +410,7 @@
         @if (count($groupStrategies) > 0)
             <div class="area-title semi" style="margin-top: 10pt;">Estrategias grupales de {{ $group['code'] }}</div>
             @foreach ($groupStrategies as $s)
-                <div class="note grey">
+                <div class="note grey{{ mb_strlen($s['body']) > 280 ? ' long' : '' }}">
                     <div class="note-body">{{ $s['body'] }}</div>
                     <div class="note-meta">
                         <span class="tag {{ $strategyClass($s['last_result']) }}">{{ $s['last_result'] }}</span>
@@ -460,7 +464,7 @@
             @foreach ($supportsWithNotes as $area)
                 <div class="area-title semi">{{ $area['label'] }}</div>
                 @foreach ($area['notes'] as $n)
-                    <div class="note grey">
+                    <div class="note grey{{ mb_strlen($n['body']) > 280 ? ' long' : '' }}">
                         <div class="note-body">{{ $n['body'] }}</div>
                         <div class="note-meta"><span class="chip">{{ $n['follow_up_label'] }}</span>{{ $n['author_name'] }}</div>
                     </div>
@@ -515,7 +519,7 @@
     <div class="section">
         <div class="sec-head"><span class="sec-num semi">{{ $num() }}</span><h2 class="sec-title semi">Decisiones del comité evaluador</h2></div>
         @forelse ($committee['items'] as $c)
-            <div class="note">
+            <div class="note{{ mb_strlen($c['decision'].' '.($c['notes'] ?? '')) > 280 ? ' long' : '' }}">
                 <div class="note-body semi">{{ $c['decision'] }}</div>
                 @if (!empty($c['notes']))<div class="note-body">{{ $c['notes'] }}</div>@endif
                 <div class="note-meta"><span class="chip">{{ $fecha($c['decided_on']) }}</span>{{ $c['author_name'] }}</div>
@@ -530,7 +534,7 @@
         <div class="section">
             <div class="sec-head"><span class="sec-num semi">{{ $num() }}</span><h2 class="sec-title semi">Proceso formativo y convivencial</h2></div>
             @forelse ($disciplinary['items'] as $d)
-                <div class="note red">
+                <div class="note red{{ mb_strlen(($d['description'] ?? '').' '.($d['action_taken'] ?? '')) > 280 ? ' long' : '' }}">
                     <div class="note-body">
                         <span class="semi">{{ $d['type'] }}</span>
                         &nbsp;<span class="tag {{ $d['status'] === 'closed' ? 'tag-mute' : 'tag-crit' }}">{{ $d['status_label'] }}</span>

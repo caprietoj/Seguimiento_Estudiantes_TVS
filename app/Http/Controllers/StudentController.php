@@ -186,7 +186,7 @@ class StudentController extends Controller
         $noteItem = fn (Contribution $c) => [
             'id' => $c->id,
             'body' => $c->body,
-            'author_name' => $c->author->name,
+            'author_name' => $c->authorLabel(),
             'follow_up_id' => $c->follow_up_id,
             'follow_up_label' => $c->followUp->shortLabel(),
             'can_delete' => Scope::canDelete($user, $group, $c->author_id),
