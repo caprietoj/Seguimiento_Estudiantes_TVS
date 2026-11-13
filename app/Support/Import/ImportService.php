@@ -6,6 +6,7 @@ use App\Enums\ImportTemplateType;
 use App\Jobs\FetchPhidiasPhotos;
 use App\Models\Contribution;
 use App\Models\Enrollment;
+use App\Models\ExternalSupport;
 use App\Models\FollowUp;
 use App\Models\Grade;
 use App\Models\Group;
@@ -15,6 +16,7 @@ use App\Models\MapScore;
 use App\Models\SchoolYear;
 use App\Models\Strategy;
 use App\Models\Student;
+use App\Models\SupportActivity;
 use App\Models\TeachingAssignment;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +32,8 @@ class ImportService
         ImportTemplateType::TeachingAssignments,
         ImportTemplateType::Grades,
         ImportTemplateType::MapScores,
+        ImportTemplateType::SupportNotes,
+        ImportTemplateType::SupportActivities,
     ];
 
     /** @param array<string, mixed> $options */
@@ -42,6 +46,8 @@ class ImportService
             ImportTemplateType::TeachingAssignments => new TeachingAssignmentsImporter($year, $user, $options),
             ImportTemplateType::Grades => new GradesImporter($year, $user, $options),
             ImportTemplateType::MapScores => new MapScoresImporter($year, $user, $options),
+            ImportTemplateType::SupportNotes => new SupportNotesImporter($year, $user, $options),
+            ImportTemplateType::SupportActivities => new SupportActivitiesImporter($year, $user, $options),
             default => throw new InvalidArgumentException("La plantilla {$type->value} todavía no se puede importar."),
         };
     }
@@ -54,6 +60,8 @@ class ImportService
             ImportTemplateType::TeachingAssignments => TeachingAssignmentsImporter::TEMPLATE,
             ImportTemplateType::Grades => GradesImporter::TEMPLATE,
             ImportTemplateType::MapScores => MapScoresImporter::TEMPLATE,
+            ImportTemplateType::SupportNotes => SupportNotesImporter::TEMPLATE,
+            ImportTemplateType::SupportActivities => SupportActivitiesImporter::TEMPLATE,
             default => null,
         };
     }
@@ -80,6 +88,8 @@ class ImportService
             $done['Estrategias'] = Strategy::withTrashed()->where('import_batch_id', $batch->id)->forceDelete();
             $done['Calificaciones'] = Grade::where('import_batch_id', $batch->id)->delete();
             $done['Calificaciones MAP'] = MapScore::where('import_batch_id', $batch->id)->delete();
+            $done['Apoyos externos'] = ExternalSupport::withTrashed()->where('import_batch_id', $batch->id)->forceDelete();
+            $done['Actividades del Dpto. de Apoyo'] = SupportActivity::where('import_batch_id', $batch->id)->delete();
 
             /** @var list<array{type: string, id: int, previous?: int|null}> $undo */
             $undo = array_reverse($batch->error_report['undo'] ?? []);
@@ -114,7 +124,9 @@ class ImportService
                     || Contribution::withTrashed()->where('student_id', $student->id)->exists()
                     || Strategy::withTrashed()->where('student_id', $student->id)->exists()
                     || $student->commitments()->exists()
-                    || $student->grades()->exists();
+                    || $student->grades()->exists()
+                    || ExternalSupport::withTrashed()->where('student_id', $student->id)->exists()
+                    || SupportActivity::where('student_id', $student->id)->exists();
 
                 if ($hasData) {
                     $student->forceFill(['import_batch_id' => null])->save();

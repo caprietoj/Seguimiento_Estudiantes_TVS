@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Enums\RoleName;
+use App\Support\Scope;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -58,6 +59,7 @@ class HandleInertiaRequests extends Middleware
                     ? $user->getRoleNames()->map(fn (string $role) => RoleName::labelFor($role))->values()
                     : [],
                 'isAdmin' => $user?->hasRole(RoleName::Admin->value) ?? false,
+                'canSeeSupport' => $user !== null && Scope::supportStatsSee($user),
             ],
         ];
     }

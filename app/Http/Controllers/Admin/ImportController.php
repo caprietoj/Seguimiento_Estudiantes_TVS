@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\AuditAction;
 use App\Enums\ImportBatchStatus;
 use App\Enums\ImportTemplateType;
+use App\Enums\SupportActivityType;
+use App\Enums\SupportArea;
 use App\Http\Controllers\Controller;
 use App\Jobs\FetchPhidiasPhotos;
 use App\Models\AuditLog;
@@ -223,10 +225,15 @@ class ImportController extends Controller
                 ImportTemplateType::TeachingAssignments => ['docente@tvs.edu.co', 'Nombre Apellido', '10A', 'Matemáticas', 'No'],
                 ImportTemplateType::Grades => ['TVS-0001', 'Ana María Pérez Gómez', '10A', 'Matemáticas', '1', '6'],
                 ImportTemplateType::MapScores => ['TVS-0001', 'Ana María Pérez Gómez', '10A', 'Matemáticas', '1', '215', '68', 'Promedio alto'],
+                ImportTemplateType::SupportNotes => ['7A', 'Ana María Pérez Gómez', '', '1', '1', '2025-09-25', 'Psicología', 'Buenas habilidades de aprendizaje.', 'Monitorear su relación con sus pares.', '', 'No', ''],
+                ImportTemplateType::SupportActivities => ['Psicología', 'Familia atendida', '7A', 'Ana María Pérez Gómez', '', '1', '2026-02-10', '2', 'Reunión con la mamá'],
                 default => [],
             };
             if (! empty($sampleRow)) {
                 $sheet->fromArray($sampleRow, null, 'A2');
+            }
+            if ($templateType === ImportTemplateType::SupportActivities) {
+                $this->addSupportActivityLists($spreadsheet);
             }
         }
 
@@ -239,6 +246,33 @@ class ImportController extends Controller
         return response()->streamDownload(function () use ($spreadsheet) {
             (new Xlsx($spreadsheet))->save('php://output');
         }, $fileName, ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
+    }
+
+    /** Hoja de ayuda con los valores aceptados en «Área» y «Tipo de actividad». */
+    private function addSupportActivityLists(Spreadsheet $spreadsheet): void
+    {
+        $help = $spreadsheet->createSheet();
+        $help->setTitle('Valores aceptados');
+        $help->fromArray(['Área', 'Tipo de actividad'], null, 'A1');
+        $help->getStyle('A1:B1')->getFont()->setBold(true);
+
+        foreach (SupportArea::cases() as $i => $area) {
+            $help->setCellValue('A'.($i + 2), $area->label());
+        }
+        foreach (SupportActivityType::cases() as $i => $type) {
+            $help->setCellValue('B'.($i + 2), $type->label());
+        }
+
+        $help->setCellValue('D1', 'Notas');
+        $help->getStyle('D1')->getFont()->setBold(true);
+        $help->fromArray([
+            ['«Estudiante en seguimiento»: una fila por estudiante y área (con su grupo). Sin estudiante, «Cantidad» es el número de casos del grupo.'],
+            ['Sin «Grupo», la actividad cuenta para todo el colegio (no aparece en las tablas por grado, sí en los totales).'],
+            ['«Semestre»: 1 = julio a diciembre, 2 = enero a junio. Si se deja vacío se deduce de la fecha.'],
+        ], null, 'D2');
+        $help->getColumnDimension('A')->setWidth(24);
+        $help->getColumnDimension('B')->setWidth(40);
+        $help->getColumnDimension('D')->setWidth(110);
     }
 
     /** @return array<string, mixed> */

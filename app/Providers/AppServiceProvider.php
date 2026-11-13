@@ -26,6 +26,8 @@ class AppServiceProvider extends ServiceProvider
         // Administración (sección 6.5): toda la configuración (años, grupos, asignaturas,
         // usuarios) es exclusiva del rol admin.
         Gate::define('admin', fn (User $user) => $user->hasRole(RoleName::Admin->value));
+        Gate::define('apoyo-ver', fn (User $user) => Scope::supportStatsSee($user));
+        Gate::define('apoyo-registrar', fn (User $user) => Scope::supportActivitiesWrite($user));
 
         // La caché de asignaciones docentes de Scope es por request: se limpia al
         // terminar, para no servir datos obsoletos en procesos persistentes (Octane)

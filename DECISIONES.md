@@ -160,6 +160,54 @@ construir. Se actualiza en cada fase.
     del catálogo por el nombre del grado ("10.°"); los importadores funcionan con la
     numeración antigua y con la nueva.
 
+## Dpto. de Apoyo: estadística general e importación 2025-2026 (13 nov 2026)
+
+25. **La estadística sale de un registro de actividades, no de los aportes.** La hoja
+    «ESTADÍSTICA GRAL» del informe de gestión cuenta estudiantes en seguimiento, familias
+    atendidas, reuniones de seguimiento, PIAR y crisis por grado y área. Nada de eso se
+    puede deducir de los aportes de la ficha (el Dpto. escribe sobre *todos* los
+    estudiantes del grupo en cada reunión, no solo sobre su caseload). Por eso se creó la
+    tabla `support_activities` (área × tipo × grupo × estudiante opcional × cantidad ×
+    fecha/semestre) y la estadística se calcula de ahí. `quantity` permite registrar cifras
+    agregadas («3 reuniones en 7A») cuando no hay registro uno a uno.
+
+26. **«Estudiantes con seguimiento» cuenta personas distintas.** Por área, un estudiante
+    cuenta una vez; en el total, una vez aunque lo acompañen varias áreas. Los registros sin
+    estudiante suman su cantidad. Las actividades sin grupo van en la fila «Todo el
+    colegio» y en los totales, no en las gráficas por curso.
+
+27. **Semestre escolar: I = julio–diciembre, II = enero–junio** (calendario B). Se deduce de
+    la fecha si no se indica. El informe de gestión del colegio es por semestre; los
+    seguimientos de la app son por periodo (3 × 2), así que el filtro de la estadística es
+    por semestre.
+
+28. **Quién ve qué.** Ven la estadística Admin, Dpto. de Apoyo y EMC (EMC con sección solo
+    los grupos de su sección); registran actividades solo Admin y Dpto. de Apoyo
+    (`Scope::supportStatsSee`, `Scope::supportActivitiesWrite`, gates `apoyo-ver` y
+    `apoyo-registrar`). Los profesores no tienen la pestaña.
+
+29. **El seguimiento del Dpto. (habilidades / acuerdos / seguimiento a las estrategias) entra
+    como un solo aporte del área, con las partes rotuladas**, no como estrategias. En el
+    Excel del colegio muchos «acuerdos» son «No requiere estrategias desde el área»;
+    convertirlos en estrategias individuales llenaría la reunión de grupo de ruido. Se
+    conservan íntegros en la ficha (Apoyos internos → área).
+
+30. **Fecha del Excel → seguimiento de la app.** El Excel del Dpto. tiene bloques por fecha,
+    no por periodo. El convertidor asigna por mes (ago–oct P1·S1, nov–dic P1·S2, ene–feb
+    P2·S1, mar P2·S2, abr–may P3·S1, jun P3·S2) y, si dos bloques caen en el mismo
+    seguimiento, corre el segundo al siguiente. La tabla de asignación queda en la hoja
+    «LEER - fechas y seguimientos» del archivo, y el archivo plano permite corregir
+    «Periodo»/«Seguimiento» antes de importar.
+
+31. **Hermanos no se emparejan solos.** `NameMatcher` ya separaba Daniel/Daniela; ahora
+    también Olivia/Sofía Manfriani Collazos: mismos dos apellidos y un nombre que no se
+    parece (ni por edición ni por letras comunes, umbral 0,7) ⇒ 70 %, por debajo del
+    emparejamiento automático. Los errores de digitación (Jhon/John) sí se emparejan.
+
+32. **Preescolar: TA = Transición A = TR**, KA = Kinder A = Kº, PKA = Prekinder A.
+    `normalizeGroupCode` los trata como el mismo grupo (resuelve el problema conocido del
+    código de Transición) y `resolveGroup` deduce su grado por el nombre del catálogo.
+
 ## Pendiente de confirmar con el colegio (no bloquea el desarrollo)
 
 - Si además de las 6 asignaciones docentes de ejemplo (Historia, Matemáticas AA y
@@ -167,3 +215,7 @@ construir. Se actualiza en cada fase.
   asignatura.
 - El dominio real y el proveedor de hosting (sección "Decisiones ya tomadas", punto 4 del
   encargo): todo depende de `APP_URL`, así que no bloquea nada.
+- Estadística del Dpto.: si las «Reuniones de seguimiento» del I semestre 2025-2026 se
+  deben cargar (el informe recibido es solo del II semestre) y qué cifra vale cuando el
+  informe trae dos distintas para lo mismo (p. ej. Psicología 7.°–9.°: 18 en el total y 25
+  en el detalle por curso; se usó el detalle).

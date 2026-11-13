@@ -26,6 +26,8 @@ use App\Http\Controllers\ReunionController;
 use App\Http\Controllers\StrategyController;
 use App\Http\Controllers\StrategyReviewController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\SupportActivityController;
+use App\Http\Controllers\SupportStatisticsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -75,6 +77,19 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('disciplina', [DisciplinaryCaseController::class, 'store'])->name('disciplina.store');
     Route::patch('disciplina/{disciplinaryCase}/estado', [DisciplinaryCaseController::class, 'updateStatus'])->name('disciplina.estado');
+
+    Route::middleware(['can:apoyo-ver'])->prefix('apoyo')->name('apoyo.')->group(function () {
+        Route::redirect('/', '/apoyo/estadistica');
+        Route::get('estadistica', [SupportStatisticsController::class, 'index'])->name('estadistica');
+        Route::get('estadistica/excel', [SupportStatisticsController::class, 'excel'])->name('estadistica.excel');
+        Route::get('actividades', [SupportActivityController::class, 'index'])->name('actividades.index');
+
+        Route::middleware(['can:apoyo-registrar'])->group(function () {
+            Route::post('actividades', [SupportActivityController::class, 'store'])->name('actividades.store');
+            Route::put('actividades/{activity}', [SupportActivityController::class, 'update'])->name('actividades.update');
+            Route::delete('actividades/{activity}', [SupportActivityController::class, 'destroy'])->name('actividades.destroy');
+        });
+    });
 
     Route::middleware(['can:admin'])->prefix('admin')->name('admin.')->group(function () {
         Route::redirect('/', '/admin/anios');

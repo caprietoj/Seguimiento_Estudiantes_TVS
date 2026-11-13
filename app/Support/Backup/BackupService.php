@@ -36,7 +36,7 @@ class BackupService
         'school_years', 'sections', 'grade_levels', 'subjects', 'grade_subject', 'import_batches',
         'groups', 'teaching_assignments', 'students', 'enrollments', 'follow_ups', 'group_meetings',
         'contributions', 'strategies', 'strategy_reviews', 'commitments', 'external_supports',
-        'grades', 'committee_decisions', 'disciplinary_cases', 'audit_logs',
+        'grades', 'committee_decisions', 'disciplinary_cases', 'map_scores', 'support_activities', 'audit_logs',
     ];
 
     public const KINDS = [
