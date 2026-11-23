@@ -18,6 +18,7 @@ enum ImportTemplateType: string
     case CommitteeDecisions = 'committee_decisions';
     case DisciplinaryCases = 'disciplinary_cases';
     case MapScores = 'map_scores';
+    case SupportNotes = 'support_notes';
 
     public function label(): string
     {
@@ -30,6 +31,7 @@ enum ImportTemplateType: string
             self::TeachingAssignments => 'Asignaciones de profesores',
             self::Grades => 'Calificaciones de asignaturas (IB)',
             self::MapScores => 'Calificaciones MAP Growth (NWEA)',
+            self::SupportNotes => 'Notas del Dpto. de Apoyo por estudiante (Psicología, Fono, T.O., Neuro)',
             self::Contributions => 'Aportes',
             self::Strategies => 'Estrategias',
             self::Commitments => 'Compromisos',

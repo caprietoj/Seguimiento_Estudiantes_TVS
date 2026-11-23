@@ -11,6 +11,7 @@ const baseTabs = [
     { label: 'Ficha del estudiante', href: '/estudiantes' },
     { label: 'Compromisos', href: '/compromisos' },
 ];
+const supportTab = { label: 'Dpto. de Apoyo', href: '/apoyo' };
 const adminTab = { label: 'Administración', href: '/admin' };
 
 /**
@@ -21,7 +22,7 @@ const adminTab = { label: 'Administración', href: '/admin' };
 export default function SeguimientoLayout({ children }: SeguimientoLayoutProps) {
     const { props, url } = usePage<SharedData>();
     const { auth } = props;
-    const tabs = auth.isAdmin ? [...baseTabs, adminTab] : baseTabs;
+    const tabs = [...baseTabs, ...(auth.canSeeSupport ? [supportTab] : []), ...(auth.isAdmin ? [adminTab] : [])];
 
     return (
         <div className="bg-background min-h-screen">

@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use App\Support\Import\NameMatcher;
+
 enum ContributionField: string
 {
     case Strength = 'strength';
@@ -44,6 +46,37 @@ enum ContributionField: string
             self::SupportOt,
             self::SupportNeuro,
         ], true);
+    }
+
+    /** @return list<ContributionField> Áreas del Dpto. de Apoyo con notas en formato del colegio y estadística. */
+    public static function clinical(): array
+    {
+        return [self::SupportPsychology, self::SupportOt, self::SupportSpeech, self::SupportNeuro];
+    }
+
+    public function shortLabel(): string
+    {
+        return match ($this) {
+            self::SupportOt => 'T.O.',
+            self::SupportSpeech => 'Fono',
+            self::SupportNeuro => 'Neuro',
+            default => $this->label(),
+        };
+    }
+
+    /** Área del Dpto. tal como la escribe el colegio («PSICOLOGIA Kº A 3», «T.O», «FONOAUDIOLOGíA»…). */
+    public static function clinicalFromText(?string $text): ?self
+    {
+        $t = NameMatcher::normalize((string) $text);
+
+        return match (true) {
+            $t === '' => null,
+            str_contains($t, 'neuro') => self::SupportNeuro,
+            str_contains($t, 'psico') => self::SupportPsychology,
+            str_contains($t, 'fono') => self::SupportSpeech,
+            str_contains($t, 'terapia') || str_contains($t, 'ocupacional') || str_replace(' ', '', $t) === 'to' => self::SupportOt,
+            default => null,
+        };
     }
 
     public function isSupportArea(): bool

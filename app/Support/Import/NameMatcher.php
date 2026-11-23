@@ -54,6 +54,12 @@ class NameMatcher
             return 60.0;
         }
 
+        // Olivia/Sofía Manfriani Collazos: mismos apellidos y un nombre totalmente distinto son
+        // hermanos, no la misma persona escrita distinto. Tampoco se emparejan solos.
+        if (self::looksLikeSiblings(explode(' ', $ka), explode(' ', $kb))) {
+            return 70.0;
+        }
+
         similar_text($ka, $kb, $byText);
         $maxLen = max(strlen($ka), strlen($kb));
         $byEdit = $maxLen <= 255 ? (1 - levenshtein($ka, $kb) / $maxLen) * 100 : $byText;
@@ -66,6 +72,35 @@ class NameMatcher
         $bySubset = $shared >= 2 && $shared === min(count($ta), count($tb)) ? 90.0 : 0.0;
 
         return round(max($byText, $byEdit, $bySubset), 1);
+    }
+
+    /**
+     * Comparten al menos dos palabras (los apellidos) y lo que cambia es un nombre por otro que
+     * no se le parece (no es un error de digitación): Olivia ≠ Sofía, Gabriela ≠ Antonia.
+     *
+     * @param  list<string>  $a
+     * @param  list<string>  $b
+     */
+    private static function looksLikeSiblings(array $a, array $b): bool
+    {
+        $onlyA = array_values(array_diff($a, $b));
+        $onlyB = array_values(array_diff($b, $a));
+
+        if (count(array_intersect($a, $b)) < 2 || $onlyA === [] || $onlyB === [] || count($onlyA) !== count($onlyB)) {
+            return false;
+        }
+
+        foreach ($onlyA as $x) {
+            foreach ($onlyB as $y) {
+                $max = max(strlen($x), strlen($y));
+                similar_text($x, $y, $pct);
+                if ($max > 0 && max(1 - levenshtein($x, $y) / $max, $pct / 100) >= 0.7) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /**

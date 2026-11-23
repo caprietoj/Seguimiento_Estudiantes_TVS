@@ -1,3 +1,4 @@
+import { AddSupportNote, SupportNoteBody, SupportNoteForm, type SupportNoteData } from '@/components/apoyo/support-note';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -6,7 +7,7 @@ import SeguimientoLayout from '@/layouts/seguimiento-layout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
-interface Note {
+interface Note extends SupportNoteData {
     id: number;
     body: string;
     author_name: string;
@@ -140,7 +141,7 @@ interface FichaProps {
     groupStrategies: GroupStrategy[];
     commitments: { school: CommitmentItem[]; family: CommitmentItem[]; can_create: boolean };
     responsibles: string[];
-    internalSupports: { field: string; label: string; notes: Note[]; can_write: boolean }[];
+    internalSupports: { field: string; label: string; clinical?: boolean; notes: Note[]; can_write: boolean }[];
     externalSupports: { items: ExternalSupportItem[]; can_write: boolean } | null;
     performance: PerformanceRow[];
     mapPerformance?: MapPerformanceData;
@@ -226,23 +227,53 @@ function LockedSection({ id, title, who }: { id: string; title: string; who: str
     );
 }
 
-function NoteList({ notes, onDelete }: { notes: Note[]; onDelete: (id: number) => void }) {
+function NoteList({
+    notes,
+    onDelete,
+    clinical,
+    studentId,
+    field,
+}: {
+    notes: Note[];
+    onDelete: (id: number) => void;
+    clinical?: boolean;
+    studentId?: number;
+    field?: string;
+}) {
+    const [editing, setEditing] = useState<number | null>(null);
+
     if (notes.length === 0) {
         return <p className="text-muted-foreground text-xs italic">Sin registros.</p>;
     }
 
     return (
         <div className="flex flex-col gap-1.5">
-            {notes.map((n) => (
-                <div key={n.id} className="bg-muted/60 rounded-md p-2">
-                    <p className="text-sm whitespace-pre-wrap">{n.body}</p>
-                    <div className="text-muted-foreground mt-1 flex items-center gap-2 text-[11px]">
-                        <span className="bg-accent text-primary rounded px-1.5 py-0.5 font-mono">{n.follow_up_label}</span>
-                        <span>{n.author_name}</span>
-                        {n.can_delete && <DeleteButton onConfirm={() => onDelete(n.id)} />}
+            {notes.map((n) =>
+                clinical && editing === n.id && studentId && field ? (
+                    <SupportNoteForm
+                        key={n.id}
+                        studentId={studentId}
+                        followUpId={n.follow_up_id}
+                        field={field}
+                        note={n}
+                        onDone={() => setEditing(null)}
+                    />
+                ) : (
+                    <div key={n.id} className="bg-muted/60 rounded-md p-2">
+                        {clinical ? <SupportNoteBody note={n} size="sm" /> : <p className="text-sm whitespace-pre-wrap">{n.body}</p>}
+                        <div className="text-muted-foreground mt-1 flex items-center gap-2 text-[11px]">
+                            <span className="bg-accent text-primary rounded px-1.5 py-0.5 font-mono">{n.follow_up_label}</span>
+                            <span>{n.author_name}</span>
+                            {clinical && n.can_delete && (
+                                <button type="button" className="hover:text-primary font-semibold" onClick={() => setEditing(n.id)}>
+                                    Editar
+                                </button>
+                            )}
+                            {n.can_delete && <DeleteButton onConfirm={() => onDelete(n.id)} />}
+                        </div>
                     </div>
-                </div>
-            ))}
+                ),
+            )}
         </div>
     );
 }
@@ -809,11 +840,30 @@ export default function FichaEstudiante(props: FichaProps) {
                                         <h4 className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{area.label}</h4>
                                         <NoteList
                                             notes={notesForFollowUp(area.notes)}
+                                            clinical={area.clinical}
+                                            studentId={student.id}
+                                            field={area.field}
                                             onDelete={(id) => router.delete(`/aportes/${id}`, { preserveScroll: true })}
                                         />
-                                        {area.can_write && activeFollowUpId && (
-                                            <AddNoteForm studentId={student.id} field={area.field} followUpId={activeFollowUpId} label="Agregar" />
-                                        )}
+                                        {area.can_write &&
+                                            activeFollowUpId &&
+                                            (area.clinical ? (
+                                                <div className="mt-2">
+                                                    <AddSupportNote
+                                                        studentId={student.id}
+                                                        field={area.field}
+                                                        followUpId={activeFollowUpId}
+                                                        label="Agregar"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <AddNoteForm
+                                                    studentId={student.id}
+                                                    field={area.field}
+                                                    followUpId={activeFollowUpId}
+                                                    label="Agregar"
+                                                />
+                                            ))}
                                     </div>
                                 ))}
                             </div>

@@ -27,8 +27,21 @@ trait ResolvesRecords
         // "6°A", "6º A" y "6ª A" son el mismo 6A (los símbolos de ordinal no son una letra).
         $code = NameMatcher::normalize(str_replace(['°', 'º', 'ª'], '', $code));
         $code = (string) preg_replace('/\b(grado|grupo|curso)\b/', '', $code);
+        $code = mb_strtoupper(str_replace(' ', '', $code));
 
-        return mb_strtoupper(str_replace(' ', '', $code));
+        // Preescolar: «Transición A», «TRANSICION» y el «TA» de Phidias son el mismo grupo
+        // (igual Kinder A/KA y Prekinder A/PKA). Si no trae letra, se asume la A.
+        if (preg_match('/^(PREKINDER|PREKINDERGARTEN|PK)([A-Z])?$/', $code, $m)) {
+            return 'PK'.($m[2] ?? 'A');
+        }
+        if (preg_match('/^(KINDER|KINDERGARTEN|K)([A-Z])?$/', $code, $m)) {
+            return 'K'.($m[2] ?? 'A');
+        }
+        if (preg_match('/^(TRANSICION|TR|T)([A-Z])?$/', $code, $m)) {
+            return 'T'.($m[2] ?? 'A');
+        }
+
+        return $code;
     }
 
     /**
@@ -67,6 +80,10 @@ trait ResolvesRecords
 
         if ($grade === null && preg_match('/^(\d{1,2})/', $wanted, $m)) {
             $grade = self::gradeValueForSchoolYear((int) $m[1]);
+        }
+
+        if ($grade === null && preg_match('/^(PK|K|T)[A-Z]$/', $wanted, $m)) {
+            $grade = self::preschoolGradeValue($m[1]);
         }
 
         if ($grade === null || ! GradeLevel::where('value', $grade)->exists()) {
@@ -122,6 +139,21 @@ trait ResolvesRecords
         }
 
         return $schoolGrade;
+    }
+
+    /** Valor del catálogo para Prekinder (PK), Kinder (K) o Transición (T), buscado por nombre. */
+    public static function preschoolGradeValue(string $prefix): ?int
+    {
+        $wanted = ['PK' => 'prekinder', 'K' => 'kinder', 'T' => 'transicion'][$prefix] ?? null;
+
+        foreach (GradeLevel::query()->orderBy('value')->get() as $level) {
+            $name = str_replace([' ', '-'], '', NameMatcher::normalize($level->name));
+            if ($wanted !== null && ($name === $wanted || ($wanted === 'kinder' ? $name === 'kinder' || $name === 'kindergarten' : str_starts_with($name, $wanted)))) {
+                return $level->value;
+            }
+        }
+
+        return null;
     }
 
     /** Inverso: el grado escolar (0 = preescolar) de un valor del catálogo. */

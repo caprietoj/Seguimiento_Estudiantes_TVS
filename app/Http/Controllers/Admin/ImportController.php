@@ -223,11 +223,13 @@ class ImportController extends Controller
                 ImportTemplateType::TeachingAssignments => ['docente@tvs.edu.co', 'Nombre Apellido', '10A', 'Matemáticas', 'No'],
                 ImportTemplateType::Grades => ['TVS-0001', 'Ana María Pérez Gómez', '10A', 'Matemáticas', '1', '6'],
                 ImportTemplateType::MapScores => ['TVS-0001', 'Ana María Pérez Gómez', '10A', 'Matemáticas', '1', '215', '68', 'Promedio alto'],
+                ImportTemplateType::SupportNotes => ['7A', 'Ana María Pérez Gómez', '', '1', '1', '2025-09-25', 'Psicología', 'Buenas habilidades de aprendizaje.', 'Monitorear su relación con sus pares.', '', 'Sí', 'No', 'No', 'No', 'No', ''],
                 default => [],
             };
             if (! empty($sampleRow)) {
                 $sheet->fromArray($sampleRow, null, 'A2');
             }
+
         }
 
         foreach (range(1, count($headers)) as $i) {

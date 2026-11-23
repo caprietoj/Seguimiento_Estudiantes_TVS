@@ -58,6 +58,8 @@ const DESCRIPTIONS: Record<string, string> = {
         'Una fila por estudiante: crea los que no existen y los matricula en su grupo del año escolar elegido (crea el grupo si hace falta).',
     teaching_assignments:
         'Una fila por profesor, grupo y asignatura (o dirección de grupo). Define qué grupos ve cada docente que entra desde la intranet.',
+    support_notes:
+        'Una fila por estudiante, área y seguimiento: habilidades, acuerdos/estrategias, seguimiento a las estrategias y las marcas (en seguimiento, familia atendida, PIAR, crisis). Queda en la reunión de grupo y en la ficha, y alimenta Dpto. de Apoyo · Estadística general.',
 };
 
 const MAPPING = [
@@ -333,6 +335,7 @@ export default function AdminImportar({ schoolYears, activeYearId, templates, ma
     });
     const [fileInputKey, setFileInputKey] = useState(0);
     const isCurrent = form.data.template_type === 'current_format';
+    const isSupportNotes = form.data.template_type === 'support_notes';
     const isPhidias = form.data.template_type === 'phidias_students';
     const year = schoolYears.find((y) => String(y.id) === String(form.data.school_year_id));
 
@@ -378,7 +381,10 @@ export default function AdminImportar({ schoolYears, activeYearId, templates, ma
                                 name="template_type"
                                 className="sr-only"
                                 checked={form.data.template_type === t.value}
-                                onChange={() => form.setData('template_type', t.value)}
+                                onChange={() =>
+                                    // En el seguimiento del Dpto. de Apoyo no se crean estudiantes salvo que se pida.
+                                    form.setData((d) => ({ ...d, template_type: t.value, create_students: t.value !== 'support_notes' }))
+                                }
                             />
                             <span className="text-sm font-semibold">{t.label}</span>
                             <span className="text-muted-foreground mt-1 block text-xs">{DESCRIPTIONS[t.value]}</span>
@@ -440,7 +446,7 @@ export default function AdminImportar({ schoolYears, activeYearId, templates, ma
                     </Button>
                 </div>
 
-                {isCurrent && (
+                {(isCurrent || isSupportNotes) && (
                     <label className="mt-3 flex items-center gap-2 text-sm">
                         <input
                             type="checkbox"

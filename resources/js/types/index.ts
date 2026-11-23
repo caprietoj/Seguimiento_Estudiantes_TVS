@@ -4,6 +4,7 @@ export interface Auth {
     user: User;
     roleLabels: string[];
     isAdmin: boolean;
+    canSeeSupport: boolean;
 }
 
 export interface BreadcrumbItem {

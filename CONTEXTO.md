@@ -3,7 +3,7 @@
 Este archivo es un resumen para otro agente (humano o IA) que no haya visto las
 conversaciones anteriores. Léelo primero; para el detalle lee también `README.md` (cómo
 correr y desplegar) y `DECISIONES.md` (qué se decidió cuando el encargo no era explícito,
-y por qué). Última actualización: 13 de octubre de 2026.
+y por qué). Última actualización: 13 de noviembre de 2026.
 
 ## Qué es esta aplicación
 
@@ -72,8 +72,9 @@ vuelves a consultar permisos, llama `Scope::flush()`.
   público** (se quitaron la ruta y la vista de registro). Límite de 5 intentos.
 - **SSO desde la intranet**: `GET /sso/intranet?token=…` (`IntranetSsoController`). La
   intranet firma con HMAC-SHA256 (`INTRANET_SSO_SECRET`) un payload con `uid`, `exp`,
-  `nonce` y opcionalmente `email`; se valida firma, vigencia y que el nonce no se reuse.
-  El ADMIN entra a `/admin`, el resto a `/reunion`.
+  `nonce` y `email`; se valida firma, vigencia y que el nonce no se reuse. Acepta GET y
+  POST (POST sin CSRF). El usuario se busca **por correo** (las bases de la intranet y del
+  seguimiento son distintas, el `uid` no coincide). Todos entran a `/reunion`.
 - `php artisan app:crear-admin correo` crea el primer ADMIN por consola.
 
 ## Stack
@@ -83,7 +84,8 @@ vuelves a consultar permisos, llama `Scope::flush()`.
 - `spatie/laravel-permission` + Policies + `App\Support\Scope`.
 - `phpoffice/phpspreadsheet` (vía `maatwebsite/excel`): importadores y plantillas.
 - `barryvdh/laravel-dompdf`: ficha en PDF, con Public Sans incrustada.
-- Cola `database` (`QUEUE_CONNECTION=database`): la usan las fotos de Phidias.
+- **Redis** para caché, sesiones y colas (contenedor `redis` en producción); la cola la usan
+  las fotos de Phidias. Detrás de Cloudflare: `trustProxies('*')` en `bootstrap/app.php`.
 - Pest, Pint, Larastan nivel 6 (sin baseline), ESLint + Prettier.
 - Docker: `Dockerfile` (`serversideup/php:8.3-fpm-nginx`, incluye cliente MySQL y zip),
   `docker-compose.prod.yml` con contenedores `app`, `queue` y `scheduler`.
@@ -152,6 +154,21 @@ siempre `protected $casts = [...]` (ver `DECISIONES.md`, Fase 1).
   **"Ficha de seguimiento - Nombre - Grupo - Año.pdf"** (con respaldo ASCII). No hay
   sección de acudientes: la app no guarda acudientes.
 - **Compromisos** (`/compromisos`) — `CompromisosController` + `pages/compromisos/index.tsx`.
+- **Dpto. de Apoyo · Estadística general** (`/apoyo/estadistica`, pestaña visible para
+  Admin, Dpto. de Apoyo y EMC; `SupportStatisticsController` + `App\Support\SupportStatistics`
+  + `pages/apoyo/estadistica.tsx`): las cinco tablas de la hoja «ESTADÍSTICA GRAL» del
+  informe de gestión (estudiantes en seguimiento, familias atendidas, reuniones de
+  seguimiento, PIAR, crisis) por grupo × área, **calculadas con las notas de la reunión de
+  grupo**, con gráficas (SVG propio, `components/apoyo/grouped-bar-chart.tsx`), subtotales
+  por sección y lista de estudiantes en seguimiento. Filtros: año, periodo/semestre,
+  sección. **Descargar Excel** genera el .xlsx con tablas y gráficas nativas.
+- **Notas del Dpto. de Apoyo** (Psicología, Fono, T.O., Neuro) en la reunión y la ficha:
+  habilidades, acuerdos/estrategias, seguimiento a las estrategias y las marcas
+  En seguimiento / Familia atendida / Reunión PIAR / Atención en crisis
+  (`components/apoyo/support-note.tsx`, columnas nuevas en `contributions`, enum `SupportFlag`).
+- La ficha también tiene **Conclusión** (por seguimiento), áreas de apoyo **Tutorías** y
+  **Otros**, y desempeño académico con **pruebas MAP Growth** (`map_scores`; cortes y áreas
+  configurables en Administración · Calificaciones, tabla `settings`).
 
 Layout institucional en `resources/js/layouts/seguimiento-layout.tsx`, colores en
 `resources/css/app.css`. **Sin modo oscuro a propósito** — no lo reactives.
@@ -205,16 +222,24 @@ Tipos (`ImportService::SUPPORTED`):
   Phidias/S3 por https. **Sin worker de cola no llegan las fotos.**
 - **Estudiantes y matrículas** (`StudentsImporter`) y **Asignaciones de profesores**
   (`TeachingAssignmentsImporter`, por correo del docente), con plantillas descargables.
+- **Calificaciones IB** (`GradesImporter`) y **MAP Growth** (`MapScoresImporter`).
+- **Notas del Dpto. de Apoyo por estudiante** (`SupportNotesImporter`, plantilla
+  `support_notes`): una fila por estudiante × área × seguimiento con los tres textos, las
+  cuatro marcas (Sí/No) y profesional externo (crea un apoyo externo). No crea estudiantes
+  salvo que se marque la opción. Reimportar no duplica y solo agrega marcas.
+- Los Excel originales del Dpto. («2025-2026_Seguimiento_Dpto_de_Apoyo.xlsx», una hoja por
+  curso con bloques por fecha, y el «INFORME DE GESTIÓN - II SEMESTRE») no se importan tal
+  cual: se convirtieron una vez a la plantilla de notas (ver DECISIONES 30).
 
 Emparejamiento de nombres (`NameMatcher`): sin tildes/mayúsculas, orden de palabras
 indiferente, ≥ 88 % automático con aviso, empates → error, Daniel/Daniela y
-Martín/Martina nunca se emparejan solos. Mismo nombre con **otro** código institucional →
+Martín/Martina y hermanos con los mismos apellidos (Olivia/Sofía) nunca se emparejan solos. Mismo nombre con **otro** código institucional →
 error (no mezcla personas). Códigos de grupo "6A", "6 A", "6°A", "6º A" son el mismo.
 
 ### Respaldos (`/admin/respaldos`, `BackupController` + `App\Support\Backup\BackupService`)
 Crear, descargar, subir, restaurar y eliminar. Formato propio .zip: `manifest.json` +
 `data/{tabla}.jsonl` + `fotos/`, generado en PHP (no depende de mysqldump). Incluye
-**solo las 21 tablas del seguimiento** (`BackupService::TABLES`) y las fotos; usuarios,
+**solo las tablas del seguimiento** (`BackupService::TABLES`, incluye `map_scores`) y las fotos; usuarios,
 roles, permisos y sesiones nunca se respaldan ni se pisan. Restaurar exige escribir
 RESTAURAR, crea antes un respaldo «previo a restauración», reemplaza todo en **una sola
 transacción** y rechaza respaldos de versiones más nuevas (migraciones que no existen
@@ -231,10 +256,6 @@ asignaciones, director de grupo), importaciones y reversiones, y respaldos/resta
 
 ## Qué falta / problemas conocidos
 
-- **Grupo de Transición**: `GroupSeeder` lo crea con código **"Transición A"**, pero
-  Phidias exporta el curso como "Transición **TA**" (código "TA"). Al importar Phidias se
-  crearía un grupo "TA" aparte. Hay que unificar el código (renombrar el grupo a "TA" o
-  enseñarle al importador la equivalencia) antes de importar preescolar.
 - **Cambio de contraseña obligatorio** en el primer ingreso: `users.must_change_password`
   existe pero nada lo hace cumplir (menos relevante con SSO).
 - **Pruebas de la matriz de permisos** celda por celda (el encargo las pide) y subir las
@@ -277,17 +298,19 @@ app/Http/Controllers/                    — un controlador por acción/recurso
 app/Http/Controllers/Admin/              — 10 controladores de /admin
 app/Http/Controllers/Auth/IntranetSsoController.php — SSO desde la intranet
 app/Console/Commands/                    — app:crear-admin, app:respaldar-base-datos
-database/migrations/                     — 26 migraciones
+database/migrations/                     — 29 migraciones
 database/seeders/                        — DemoDataSeeder (ficticio), GradeLevelSeeder y GroupSeeder (reales)
 config/seguimiento.php                   — configuración propia (SSO, EMC, periodos, escala IB, respaldos)
 resources/views/pdf/ficha.blade.php      — plantilla del PDF; resources/fonts/pdf/ sus fuentes
-resources/js/pages/                      — reunion/, estudiantes/, compromisos/, admin/ (incl. importar, asignaciones, respaldos)
+resources/js/pages/                      — reunion/, estudiantes/, compromisos/, apoyo/, admin/ (incl. importar, asignaciones, respaldos)
+app/Support/SupportStatistics.php        — estadística del Dpto. de Apoyo (desde las notas de la reunión)
 routes/web.php                           — todas las rutas (Inertia, sin API)
 ```
 
 ## Si vas a seguir construyendo
 
-1. Resolver el código del grupo de Transición antes de importar preescolar desde Phidias.
+1. Llevar a estrategias, compromisos y demás registros el cambio de grupo por año del
+   seguimiento (DECISIONES 29) para escribir en reuniones de años anteriores.
 2. Pruebas de la matriz de permisos contra `Scope` y decidir si las pruebas se suben.
 3. Plantillas de importación restantes y logo en el PDF.
 4. Fase 6: polling en la reunión, probar Docker y el pipeline de release.

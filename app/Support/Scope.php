@@ -237,6 +237,12 @@ class Scope
         return isset(self::teachingSubjectKeys($user)[$group->id.'|'.$subject->id]);
     }
 
+    /** Ve la estadística general del Dpto. de Apoyo: Admin, Dpto. de Apoyo y EMC (EMC solo los grupos de su sección). */
+    public static function supportStatsSee(User $user): bool
+    {
+        return self::isAdmin($user) || self::isPsicologia($user) || self::hasRole($user, RoleName::Emc);
+    }
+
     /** Puede registrar/editar calificaciones de pruebas MAP NWEA: EMC de la sección o Admin. */
     public static function mapScoreWrite(User $user, Group $group): bool
     {

@@ -160,6 +160,62 @@ construir. Se actualiza en cada fase.
     del catálogo por el nombre del grado ("10.°"); los importadores funcionan con la
     numeración antigua y con la nueva.
 
+## Dpto. de Apoyo: notas por estudiante y estadística general (13 y 23 nov 2026)
+
+25. **La estadística sale de las notas que cada área registra en la reunión de grupo.** Cada
+    nota de Psicología, Fonoaudiología, T.O. o Neuropsicología tiene el formato del colegio
+    (habilidades/observación en `body`, `agreements`, `strategy_follow_up`) y cuatro marcas
+    Sí/No en `contributions`: `in_follow_up`, `family_attended`, `piar_meeting`,
+    `crisis_attention` (enum `SupportFlag`). Se ven en la reunión y en la ficha (y su PDF), y
+    se pueden corregir (`PUT /aportes/{id}`, quien la escribió o quien puede borrarla).
+    *Primera versión descartada (13 nov):* un registro de actividades aparte
+    (`support_activities`); el colegio quiere que las cifras salgan de lo que cada psicóloga
+    registra por estudiante en la reunión, no de un segundo registro.
+
+26. **Cómo se cuenta cada indicador** (`App\Support\SupportStatistics`), por grupo × área:
+    estudiantes en seguimiento = estudiantes distintos con la marca (en el total, una vez
+    aunque lo vean varias áreas); familias, PIAR y crisis = notas con la marca; reuniones de
+    seguimiento = seguimientos en que el área registró al menos una nota de un estudiante
+    del grupo. Cada nota cuenta en el grupo en que el estudiante estaba matriculado ese año.
+
+27. **Filtro de tiempo por periodos.** Año completo, I semestre (periodo 1), II semestre
+    (periodos 2 y 3) o un periodo; los semestres se configuran en `seguimiento.semestres`.
+
+28. **Quién ve qué.** Ven la estadística Admin, Dpto. de Apoyo y EMC (EMC con sección solo
+    los grupos de su sección): `Scope::supportStatsSee`, gate `apoyo-ver`. Escribir notas
+    del Dpto. sigue las reglas de siempre (`Scope::writesField`).
+
+29. **Notas en años anteriores.** `ContributionController` busca el grupo del estudiante en
+    el año del seguimiento, no en el año activo (antes devolvía 422 al escribir en una
+    reunión de 2025-2026 si el estudiante no tenía matrícula en el año activo).
+
+30. **Importación 2025-2026.** El Excel del Dpto. tiene bloques por fecha, no por periodo: el
+    convertidor asigna por mes (ago–oct P1·S1, nov–dic P1·S2, ene–feb P2·S1, mar P2·S2,
+    abr–may P3·S1, jun P3·S2) y, si dos bloques caen en el mismo seguimiento, corre el
+    segundo al siguiente; la asignación queda en la hoja «LEER» del archivo. La hoja
+    EMPALME entra como nota de cierre (P3·S2) con «En seguimiento» = Sí. Familias, PIAR y
+    crisis no se registraron por estudiante en 2025-2026: esas columnas van vacías (las
+    menciones en el texto —«se citará a papás», «entra en crisis», «tiene PIAR»— no
+    equivalen a la actividad). Reimportar agrega marcas nuevas a una nota igual, nunca las
+    quita.
+
+31b. **Notas del Dpto.: solo nombre exacto o código, y el grupo real del estudiante.** Son
+    datos sensibles: `SupportNotesImporter` no usa la similitud de `NameMatcher` (que sí usan
+    los demás importadores); acepta el nombre igual sin importar mayúsculas, tildes ni orden
+    de nombres y apellidos, o el código institucional. Si no hay coincidencia exacta la fila
+    falla y el error muestra el nombre más parecido solo como pista. Si el estudiante está
+    matriculado ese año en otro grupo (11B y el archivo dice 11A), la nota va a su grupo real
+    con un aviso.
+
+31. **Hermanos no se emparejan solos.** `NameMatcher` ya separaba Daniel/Daniela; ahora
+    también Olivia/Sofía Manfriani Collazos: mismos dos apellidos y un nombre que no se
+    parece (ni por edición ni por letras comunes, umbral 0,7) ⇒ 70 %, por debajo del
+    emparejamiento automático. Los errores de digitación (Jhon/John) sí se emparejan.
+
+32. **Preescolar: TA = Transición A = TR**, KA = Kinder A = Kº, PKA = Prekinder A.
+    `normalizeGroupCode` los trata como el mismo grupo (resuelve el problema conocido del
+    código de Transición) y `resolveGroup` deduce su grado por el nombre del catálogo.
+
 ## Pendiente de confirmar con el colegio (no bloquea el desarrollo)
 
 - Si además de las 6 asignaciones docentes de ejemplo (Historia, Matemáticas AA y
@@ -167,3 +223,6 @@ construir. Se actualiza en cada fase.
   asignatura.
 - El dominio real y el proveedor de hosting (sección "Decisiones ya tomadas", punto 4 del
   encargo): todo depende de `APP_URL`, así que no bloquea nada.
+- Estrategias, compromisos, apoyos externos y demás registros aún buscan el grupo del año
+  activo (`currentGroup()`); para escribirlos en reuniones de años anteriores conviene el
+  mismo cambio que en los aportes (DECISIONES 29).
