@@ -266,7 +266,7 @@ function IndicatorBlock({ n, indicator, areas, series }: { n: number; indicator:
                         )}
                     </div>
 
-                    <div className="min-w-0 xl:sticky xl:top-4 xl:self-start">
+                    <div className="min-w-0 self-start">
                         <div className="mb-2">
                             <ChartLegend series={series} />
                         </div>
@@ -274,7 +274,8 @@ function IndicatorBlock({ n, indicator, areas, series }: { n: number; indicator:
                             title={indicator.title}
                             series={series}
                             categories={categories}
-                            height={Math.max(260, Math.min(520, indicator.rows.length * 22 + 40))}
+                            // Fija junto a su tabla (sin acompañar el scroll), con una altura parecida a la de la tabla.
+                            height={Math.max(260, Math.min(560, indicator.rows.length * 29 + 40))}
                         />
                     </div>
                 </div>
