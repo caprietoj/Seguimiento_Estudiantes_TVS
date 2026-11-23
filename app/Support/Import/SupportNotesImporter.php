@@ -5,8 +5,10 @@ namespace App\Support\Import;
 use App\Enums\ContributionField;
 use App\Enums\SupportFlag;
 use App\Models\Contribution;
+use App\Models\Enrollment;
 use App\Models\ExternalSupport;
 use App\Models\FollowUp;
+use App\Models\Group;
 use App\Models\Student;
 
 /**
@@ -55,6 +57,12 @@ class SupportNotesImporter extends Importer
 
     /** @var array<string, FollowUp|null> */
     private array $followUps = [];
+
+    /** @var array<int, int>|null student_id => group_id de las matrículas del año */
+    private ?array $enrolledIn = null;
+
+    /** @var array<string, list<Student>>|null estudiantes por nombre normalizado (NameMatcher::key) */
+    private ?array $byKey = null;
 
     protected function process(array $sheets, ImportReport $report): void
     {
@@ -133,7 +141,7 @@ class SupportNotesImporter extends Importer
 
         $group = $this->resolveGroup($get('group'), null, true, $report, $sheet, $r);
         $code = $get('code') !== '' ? $get('code') : null;
-        $student = $group ? $this->resolveStudent($name, $code, $group, (bool) ($this->options['create_students'] ?? false), $report, $sheet, $r) : null;
+        [$student, $group] = $group ? $this->exactStudent($name, $code, $group, $report, $sheet, $r) : [null, null];
 
         if ($group === null || $student === null || ! $this->ensureEnrollment($student, $group, false, $report, $sheet, $r)) {
             $report->rowsFailed++;
@@ -215,6 +223,82 @@ class SupportNotesImporter extends Importer
             'área' => $field->label(),
             'registros' => $added,
         ]);
+    }
+
+    /**
+     * Estudiante por código o por nombre EXACTO (sin importar mayúsculas, tildes ni el orden de
+     * nombres y apellidos). Son datos sensibles: nunca se empareja por parecido. Si el estudiante
+     * está matriculado ese año en otro grupo del que dice el archivo (11B en vez de 11A), la nota
+     * va a su grupo real.
+     *
+     * @return array{0: Student|null, 1: Group|null}
+     */
+    private function exactStudent(string $name, ?string $code, Group $fileGroup, ImportReport $report, string $sheet, int $row): array
+    {
+        $this->enrolledIn ??= Enrollment::where('school_year_id', $this->schoolYear->id)->pluck('group_id', 'student_id')->all();
+
+        if ($code !== null) {
+            $byCode = Student::where('institutional_code', $code)->first();
+            if ($byCode === null) {
+                $report->error($sheet, $row, "No existe ningún estudiante con el código {$code}.");
+
+                return [null, null];
+            }
+            $candidates = collect([$byCode]);
+        } else {
+            if ($this->byKey === null) {
+                $this->byKey = [];
+                foreach (Student::all(['id', 'full_name', 'institutional_code']) as $s) {
+                    $this->byKey[NameMatcher::key($s->full_name)][] = $s;
+                }
+            }
+            $candidates = collect($this->byKey[NameMatcher::key($name)] ?? []);
+        }
+
+        if ($candidates->isEmpty()) {
+            if ((bool) ($this->options['create_students'] ?? false)) {
+                $student = $this->resolveStudent($name, null, $fileGroup, true, $report, $sheet, $row);
+
+                return [$student, $fileGroup];
+            }
+
+            $this->allStudents ??= Student::all();
+            $near = NameMatcher::best($name, $this->allStudents, fn (Student $s) => $s->full_name);
+            $hint = $near['match'] instanceof Student && $near['score'] >= 60
+                ? " El nombre más parecido en la herramienta es «{$near['match']->full_name}» ({$near['score']} %); si es la misma persona, corrige el nombre en el archivo."
+                : '';
+            $report->error($sheet, $row, "No hay ningún estudiante llamado exactamente «{$name}» (no se emparejan nombres parecidos).{$hint}");
+
+            return [null, null];
+        }
+
+        // 1) El del grupo del archivo; 2) el único matriculado ese año en otro grupo; 3) el único sin matrícula.
+        $inFileGroup = $candidates->filter(fn (Student $s) => ($this->enrolledIn[$s->id] ?? null) === $fileGroup->id);
+        if ($inFileGroup->count() === 1) {
+            return [$inFileGroup->first(), $fileGroup];
+        }
+
+        $enrolled = $candidates->filter(fn (Student $s) => isset($this->enrolledIn[$s->id]));
+        if ($enrolled->count() === 1) {
+            /** @var Student $student */
+            $student = $enrolled->first();
+            $realGroup = Group::find($this->enrolledIn[$student->id]);
+            if ($realGroup !== null) {
+                $report->warning($sheet, $row, "{$student->full_name} está matriculado(a) en {$realGroup->code} en {$this->schoolYear->name} (el archivo dice {$fileGroup->code}): la nota se registra en {$realGroup->code}.");
+
+                return [$student, $realGroup];
+            }
+        }
+
+        if ($candidates->count() === 1 && $enrolled->isEmpty()) {
+            $report->warning($sheet, $row, "{$candidates->first()->full_name} no tenía matrícula en {$this->schoolYear->name}: se matricula en {$fileGroup->code}.");
+
+            return [$candidates->first(), $fileGroup];
+        }
+
+        $report->error($sheet, $row, "Hay varios estudiantes llamados «{$name}». Escribe su código institucional en la fila.");
+
+        return [null, null];
     }
 
     private function followUp(string $period, string $number): ?FollowUp

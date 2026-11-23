@@ -199,6 +199,14 @@ construir. Se actualiza en cada fase.
     equivalen a la actividad). Reimportar agrega marcas nuevas a una nota igual, nunca las
     quita.
 
+31b. **Notas del Dpto.: solo nombre exacto o código, y el grupo real del estudiante.** Son
+    datos sensibles: `SupportNotesImporter` no usa la similitud de `NameMatcher` (que sí usan
+    los demás importadores); acepta el nombre igual sin importar mayúsculas, tildes ni orden
+    de nombres y apellidos, o el código institucional. Si no hay coincidencia exacta la fila
+    falla y el error muestra el nombre más parecido solo como pista. Si el estudiante está
+    matriculado ese año en otro grupo (11B y el archivo dice 11A), la nota va a su grupo real
+    con un aviso.
+
 31. **Hermanos no se emparejan solos.** `NameMatcher` ya separaba Daniel/Daniela; ahora
     también Olivia/Sofía Manfriani Collazos: mismos dos apellidos y un nombre que no se
     parece (ni por edición ni por letras comunes, umbral 0,7) ⇒ 70 %, por debajo del
