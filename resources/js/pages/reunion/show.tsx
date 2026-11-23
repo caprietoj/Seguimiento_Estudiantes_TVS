@@ -1,3 +1,4 @@
+import { AddSupportNote, SupportNoteBody, SupportNoteForm, type SupportNoteData } from '@/components/apoyo/support-note';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -52,9 +53,10 @@ interface Column {
     label: string;
     type: 'notes' | 'asignaturas' | 'subject_attention' | 'estrategias' | 'responsables';
     support?: boolean;
+    clinical?: boolean;
 }
 
-interface Note {
+interface Note extends SupportNoteData {
     id: number;
     body: string;
     author_name: string;
@@ -207,9 +209,28 @@ function DeleteButton({ onConfirm }: { onConfirm: () => void }) {
     );
 }
 
-function NoteItem({ note, field, onDelete }: { note: Note; field: string; onDelete: () => void }) {
+function NoteItem({
+    note,
+    field,
+    onDelete,
+    clinical,
+    studentId,
+    followUpId,
+}: {
+    note: Note;
+    field: string;
+    onDelete: () => void;
+    clinical?: boolean;
+    studentId: number;
+    followUpId: number;
+}) {
     const isStrength = field === 'strength';
     const isImprovement = field === 'improvement';
+    const [editing, setEditing] = useState(false);
+
+    if (editing) {
+        return <SupportNoteForm studentId={studentId} followUpId={followUpId} field={field} note={note} onDone={() => setEditing(false)} />;
+    }
 
     return (
         <div
@@ -222,13 +243,24 @@ function NoteItem({ note, field, onDelete }: { note: Note; field: string; onDele
                       : 'border-border/70 bg-card text-foreground')
             }
         >
-            <p className="leading-relaxed whitespace-pre-wrap">{note.body}</p>
+            {clinical ? <SupportNoteBody note={note} /> : <p className="leading-relaxed whitespace-pre-wrap">{note.body}</p>}
             <div className="text-muted-foreground mt-1 flex items-center justify-between gap-1.5 border-t border-black/5 pt-1 text-[10.5px]">
                 <span className="truncate">
                     <strong className="text-foreground/85 font-semibold">{note.author_name}</strong>
                     {note.author_role && <span className="opacity-75"> · {note.author_role}</span>}
                 </span>
-                {note.can_delete && <DeleteButton onConfirm={onDelete} />}
+                <span className="flex items-center gap-1">
+                    {clinical && note.can_delete && (
+                        <button
+                            type="button"
+                            className="hover:text-primary rounded px-1.5 py-0.5 text-[10.5px] font-semibold"
+                            onClick={() => setEditing(true)}
+                        >
+                            Editar
+                        </button>
+                    )}
+                    {note.can_delete && <DeleteButton onConfirm={onDelete} />}
+                </span>
             </div>
         </div>
     );
@@ -790,10 +822,23 @@ function ContentCell({ col, student, followUpId }: { col: Column; student: Stude
         return (
             <div className="flex flex-col gap-1.5">
                 {data.notes.map((n) => (
-                    <NoteItem key={n.id} note={n} field={col.key} onDelete={() => router.delete(`/aportes/${n.id}`, { preserveScroll: true })} />
+                    <NoteItem
+                        key={n.id}
+                        note={n}
+                        field={col.key}
+                        clinical={col.clinical}
+                        studentId={student.id}
+                        followUpId={followUpId}
+                        onDelete={() => router.delete(`/aportes/${n.id}`, { preserveScroll: true })}
+                    />
                 ))}
                 {data.notes.length === 0 && !data.can_write && <span className="text-muted-foreground/50 text-[11px] italic">Sin registros</span>}
-                {data.can_write && <AddNoteForm studentId={student.id} followUpId={followUpId} field={col.key} />}
+                {data.can_write &&
+                    (col.clinical ? (
+                        <AddSupportNote studentId={student.id} followUpId={followUpId} field={col.key} />
+                    ) : (
+                        <AddNoteForm studentId={student.id} followUpId={followUpId} field={col.key} />
+                    ))}
             </div>
         );
     }

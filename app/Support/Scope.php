@@ -243,12 +243,6 @@ class Scope
         return self::isAdmin($user) || self::isPsicologia($user) || self::hasRole($user, RoleName::Emc);
     }
 
-    /** Registra, edita y elimina actividades del Dpto. de Apoyo: Admin y Dpto. de Apoyo. */
-    public static function supportActivitiesWrite(User $user): bool
-    {
-        return self::isAdmin($user) || self::isPsicologia($user);
-    }
-
     /** Puede registrar/editar calificaciones de pruebas MAP NWEA: EMC de la sección o Admin. */
     public static function mapScoreWrite(User $user, Group $group): bool
     {

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\SupportArea;
 use App\Models\SchoolYear;
 use App\Models\Section;
+use App\Support\Scope;
 use App\Support\SupportStatistics;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -25,29 +25,38 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Dpto. de Apoyo · Estadística general: la hoja «ESTADÍSTICA GRAL» del informe de gestión,
- * calculada a partir de las actividades registradas, con descarga en Excel.
+ * calculada con las notas de las áreas en la reunión de grupo, con descarga en Excel.
  */
 class SupportStatisticsController extends Controller
 {
+    /** Filtro de tiempo: año completo, semestre (I = P1, II = P2 y P3) o un periodo. */
+    private const SCOPES = [
+        'todo' => 'Año completo',
+        's1' => 'I semestre',
+        's2' => 'II semestre',
+        'p1' => 'Periodo 1',
+        'p2' => 'Periodo 2',
+        'p3' => 'Periodo 3',
+    ];
+
     /** Los mismos colores por área que la página (validados para daltonismo). */
-    private const AREA_COLORS = ['psychology' => '2A78D6', 'ot' => 'EB6834', 'speech' => '1BAF7A', 'neuro' => 'EDA100'];
+    private const AREA_COLORS = ['support_psychology' => '2A78D6', 'support_ot' => 'EB6834', 'support_speech' => '1BAF7A', 'support_neuro' => 'EDA100'];
 
     public function index(Request $request): Response
     {
-        [$year, $semester, $sectionId] = $this->filters($request);
+        [$year, $scope, $sectionId] = $this->filters($request);
 
         return Inertia::render('apoyo/estadistica', [
-            ...$this->filterProps($year, $semester, $sectionId),
-            'stats' => SupportStatistics::build($request->user(), $year, $semester, $sectionId),
-            'canWrite' => $request->user()->can('apoyo-registrar'),
+            ...$this->filterProps($year, $scope, $sectionId),
+            'stats' => SupportStatistics::build($request->user(), $year, $scope, $sectionId),
         ]);
     }
 
     public function excel(Request $request): StreamedResponse
     {
-        [$year, $semester, $sectionId] = $this->filters($request);
-        $stats = SupportStatistics::build($request->user(), $year, $semester, $sectionId);
-        $period = $semester === null ? 'Año completo' : ($semester === 1 ? 'I semestre' : 'II semestre');
+        [$year, $scope, $sectionId] = $this->filters($request);
+        $stats = SupportStatistics::build($request->user(), $year, $scope, $sectionId);
+        $period = self::SCOPES[$scope];
         $section = $sectionId ? Section::whereKey($sectionId)->value('name') : null;
 
         $book = new Spreadsheet;
@@ -106,7 +115,6 @@ class SupportStatisticsController extends Controller
             $sheet->getColumnDimension($this->col($c))->setWidth(20);
         }
 
-        $this->othersSheet($book, $stats);
         $this->casesSheet($book, $stats);
         $book->setActiveSheetIndex(0);
 
@@ -119,30 +127,32 @@ class SupportStatisticsController extends Controller
         }, $fileName, ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
     }
 
-    /** @return array{0: SchoolYear, 1: int|null, 2: int|null} */
+    /** @return array{0: SchoolYear, 1: string, 2: int|null} */
     private function filters(Request $request): array
     {
         $year = SchoolYear::find($request->integer('anio')) ?? SchoolYear::where('is_active', true)->first() ?? SchoolYear::orderByDesc('starts_on')->firstOrFail();
-        $semester = in_array($request->query('semestre'), ['1', '2'], true) ? (int) $request->query('semestre') : null;
+        $scope = array_key_exists((string) $request->query('periodo'), self::SCOPES) ? (string) $request->query('periodo') : 'todo';
         $sectionId = $request->integer('seccion') > 0 ? $request->integer('seccion') : null;
 
+        // EMC con sección asignada ve solo su sección.
         $user = $request->user();
-        if ($user->emc_section_id !== null && ! $user->can('apoyo-registrar') && config('seguimiento.emc_limita_por_seccion', true)) {
+        if ($user->emc_section_id !== null && ! Scope::isAdmin($user) && ! Scope::isPsicologia($user)) {
             $sectionId = $user->emc_section_id;
         }
 
-        return [$year, $semester, $sectionId];
+        return [$year, $scope, $sectionId];
     }
 
     /** @return array<string, mixed> */
-    private function filterProps(SchoolYear $year, ?int $semester, ?int $sectionId): array
+    private function filterProps(SchoolYear $year, string $scope, ?int $sectionId): array
     {
         return [
             'years' => SchoolYear::orderByDesc('starts_on')->get(['id', 'name'])->map(fn (SchoolYear $y) => ['id' => $y->id, 'name' => $y->name])->values(),
             'sections' => Section::orderBy('id')->get(['id', 'name'])->map(fn (Section $s) => ['id' => $s->id, 'name' => $s->name])->values(),
+            'scopes' => collect(self::SCOPES)->map(fn (string $label, string $value) => ['value' => $value, 'label' => $label])->values(),
             'filters' => [
                 'anio' => $year->id,
-                'semestre' => $semester === null ? 'todo' : (string) $semester,
+                'periodo' => $scope,
                 'seccion' => $sectionId === null ? 'todas' : (string) $sectionId,
             ],
             'yearName' => $year->name,
@@ -171,31 +181,6 @@ class SupportStatisticsController extends Controller
         $chart->setTopLeftPosition($anchorCol.max(1, $anchorRow));
         $chart->setBottomRightPosition($this->col((int) $this->colIndex($anchorCol) + 9).(max(1, $anchorRow) + 20));
         $sheet->addChart($chart);
-    }
-
-    /** @param array<string, mixed> $stats */
-    private function othersSheet(Spreadsheet $book, array $stats): void
-    {
-        $sheet = $book->createSheet();
-        $sheet->setTitle('Otras actividades');
-        $areas = SupportArea::cases();
-        $lastCol = $this->col(count($areas) + 2);
-        $sheet->fromArray(['ACTIVIDAD', ...array_map(fn (SupportArea $a) => mb_strtoupper($a->label()), $areas), 'TOTAL'], null, 'A1');
-        $this->headerStyle($sheet, "A1:{$lastCol}1");
-
-        $row = 2;
-        foreach ($stats['others'] as $item) {
-            $sheet->fromArray([$item['label'], ...array_map(fn (SupportArea $a) => $item['values'][$a->value], $areas), $item['total']], null, "A{$row}", true);
-            $row++;
-        }
-        if ($row === 2) {
-            $sheet->setCellValue('A2', 'No hay otras actividades registradas con estos filtros.');
-        }
-
-        $sheet->getColumnDimension('A')->setWidth(42);
-        foreach (range(2, count($areas) + 2) as $c) {
-            $sheet->getColumnDimension($this->col($c))->setWidth(20);
-        }
     }
 
     /** @param array<string, mixed> $stats */

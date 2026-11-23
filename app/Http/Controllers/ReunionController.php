@@ -142,7 +142,7 @@ class ReunionController extends Controller
             ['key' => 'estrategias', 'label' => 'Estrategias individuales', 'type' => 'estrategias'],
             ['key' => 'responsables', 'label' => 'Responsables', 'type' => 'responsables'],
         ])
-            ->concat($visibleAreas->map(fn (ContributionField $f) => ['key' => $f->value, 'label' => $f->label(), 'type' => 'notes', 'support' => true]))
+            ->concat($visibleAreas->map(fn (ContributionField $f) => ['key' => $f->value, 'label' => $f->label(), 'type' => 'notes', 'support' => true, 'clinical' => $f->isClinical()]))
             ->push(['key' => 'observation', 'label' => 'Observación', 'type' => 'notes'])
             ->values();
 
@@ -163,6 +163,7 @@ class ReunionController extends Controller
                     $list = ($contributions->get($student->id.'|'.$col['key']) ?? collect())->map(fn (Contribution $c) => [
                         'id' => $c->id,
                         'body' => $c->body,
+                        ...$c->supportDetails(),
                         'author_name' => $c->authorLabel(),
                         'author_role' => $roleLabel($c->author),
                         'can_delete' => Scope::canDelete($user, $group, $c->author_id),

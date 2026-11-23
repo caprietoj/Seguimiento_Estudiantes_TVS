@@ -228,6 +228,7 @@ class StudentController extends Controller
         $noteItem = fn (Contribution $c) => [
             'id' => $c->id,
             'body' => $c->body,
+            ...$c->supportDetails(),
             'author_name' => $c->authorLabel(),
             'follow_up_id' => $c->follow_up_id,
             'follow_up_label' => $c->followUp->shortLabel(),
@@ -291,6 +292,7 @@ class StudentController extends Controller
             ->map(fn (ContributionField $f) => [
                 'field' => $f->value,
                 'label' => $f->label(),
+                'clinical' => $f->isClinical(),
                 'notes' => $notesFor($f->value),
                 'can_write' => Scope::writesField($user, $group, $f),
             ])->values();

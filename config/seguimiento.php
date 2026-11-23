@@ -82,4 +82,15 @@ return [
     // Un nivel igual o menor a este valor marca la asignatura como "a tener en cuenta".
     'nivel_atencion' => 3,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Semestres de la estadística del Dpto. de Apoyo (calendario B)
+    |--------------------------------------------------------------------------
+    | Periodos que forman cada semestre: I = agosto a diciembre, II = enero a junio.
+    */
+    'semestres' => [
+        1 => [1],
+        2 => [2, 3],
+    ],
+
 ];

@@ -154,18 +154,18 @@ siempre `protected $casts = [...]` (ver `DECISIONES.md`, Fase 1).
   **"Ficha de seguimiento - Nombre - Grupo - Año.pdf"** (con respaldo ASCII). No hay
   sección de acudientes: la app no guarda acudientes.
 - **Compromisos** (`/compromisos`) — `CompromisosController` + `pages/compromisos/index.tsx`.
-- **Dpto. de Apoyo** (`/apoyo`, pestaña visible para Admin, Dpto. de Apoyo y EMC):
-  - **Estadística general** (`/apoyo/estadistica`, `SupportStatisticsController` +
-    `App\Support\SupportStatistics` + `pages/apoyo/estadistica.tsx`): reproduce la hoja
-    «ESTADÍSTICA GRAL» del informe de gestión — cinco tablas grupo × área (estudiantes en
-    seguimiento, familias atendidas, reuniones de seguimiento, PIAR, crisis) con gráfica de
-    barras (SVG propio, `components/apoyo/grouped-bar-chart.tsx`, colores por área en
-    `apoyo-nav.tsx`), subtotales por sección, otras actividades y lista de estudiantes en
-    seguimiento. Filtros: año, semestre, sección. **Descargar Excel** (`/apoyo/estadistica/excel`)
-    genera el .xlsx con las mismas tablas y gráficas nativas de Excel.
-  - **Registro de actividades** (`/apoyo/actividades`, `SupportActivityController`): crear,
-    editar y eliminar actividades (tabla `support_activities`, modelo `SupportActivity`,
-    enums `SupportArea` y `SupportActivityType`). Solo Admin y Dpto. de Apoyo escriben.
+- **Dpto. de Apoyo · Estadística general** (`/apoyo/estadistica`, pestaña visible para
+  Admin, Dpto. de Apoyo y EMC; `SupportStatisticsController` + `App\Support\SupportStatistics`
+  + `pages/apoyo/estadistica.tsx`): las cinco tablas de la hoja «ESTADÍSTICA GRAL» del
+  informe de gestión (estudiantes en seguimiento, familias atendidas, reuniones de
+  seguimiento, PIAR, crisis) por grupo × área, **calculadas con las notas de la reunión de
+  grupo**, con gráficas (SVG propio, `components/apoyo/grouped-bar-chart.tsx`), subtotales
+  por sección y lista de estudiantes en seguimiento. Filtros: año, periodo/semestre,
+  sección. **Descargar Excel** genera el .xlsx con tablas y gráficas nativas.
+- **Notas del Dpto. de Apoyo** (Psicología, Fono, T.O., Neuro) en la reunión y la ficha:
+  habilidades, acuerdos/estrategias, seguimiento a las estrategias y las marcas
+  En seguimiento / Familia atendida / Reunión PIAR / Atención en crisis
+  (`components/apoyo/support-note.tsx`, columnas nuevas en `contributions`, enum `SupportFlag`).
 - La ficha también tiene **Conclusión** (por seguimiento), áreas de apoyo **Tutorías** y
   **Otros**, y desempeño académico con **pruebas MAP Growth** (`map_scores`; cortes y áreas
   configurables en Administración · Calificaciones, tabla `settings`).
@@ -223,16 +223,13 @@ Tipos (`ImportService::SUPPORTED`):
 - **Estudiantes y matrículas** (`StudentsImporter`) y **Asignaciones de profesores**
   (`TeachingAssignmentsImporter`, por correo del docente), con plantillas descargables.
 - **Calificaciones IB** (`GradesImporter`) y **MAP Growth** (`MapScoresImporter`).
-- **Seguimiento del Dpto. de Apoyo** (`SupportNotesImporter`, plantilla `support_notes`): una
-  fila por estudiante × área × seguimiento; habilidades + acuerdos + seguimiento a las
-  estrategias quedan en un solo aporte del área, rotulados. «Profesional externo = Sí» crea
-  un apoyo externo. No crea estudiantes salvo que se marque la opción.
-- **Actividades del Dpto. de Apoyo** (`SupportActivitiesImporter`, plantilla
-  `support_activities`): alimenta la estadística. Solo lee hojas con columna «Área» (las de
-  ayuda se ignoran). La plantilla trae una hoja con los valores aceptados.
+- **Notas del Dpto. de Apoyo por estudiante** (`SupportNotesImporter`, plantilla
+  `support_notes`): una fila por estudiante × área × seguimiento con los tres textos, las
+  cuatro marcas (Sí/No) y profesional externo (crea un apoyo externo). No crea estudiantes
+  salvo que se marque la opción. Reimportar no duplica y solo agrega marcas.
 - Los Excel originales del Dpto. («2025-2026_Seguimiento_Dpto_de_Apoyo.xlsx», una hoja por
   curso con bloques por fecha, y el «INFORME DE GESTIÓN - II SEMESTRE») no se importan tal
-  cual: se convirtieron una vez a las dos plantillas (ver DECISIONES 29–30).
+  cual: se convirtieron una vez a la plantilla de notas (ver DECISIONES 30).
 
 Emparejamiento de nombres (`NameMatcher`): sin tildes/mayúsculas, orden de palabras
 indiferente, ≥ 88 % automático con aviso, empates → error, Daniel/Daniela y
@@ -242,7 +239,7 @@ error (no mezcla personas). Códigos de grupo "6A", "6 A", "6°A", "6º A" son e
 ### Respaldos (`/admin/respaldos`, `BackupController` + `App\Support\Backup\BackupService`)
 Crear, descargar, subir, restaurar y eliminar. Formato propio .zip: `manifest.json` +
 `data/{tabla}.jsonl` + `fotos/`, generado en PHP (no depende de mysqldump). Incluye
-**solo las tablas del seguimiento** (`BackupService::TABLES`, incluye `map_scores` y `support_activities`) y las fotos; usuarios,
+**solo las tablas del seguimiento** (`BackupService::TABLES`, incluye `map_scores`) y las fotos; usuarios,
 roles, permisos y sesiones nunca se respaldan ni se pisan. Restaurar exige escribir
 RESTAURAR, crea antes un respaldo «previo a restauración», reemplaza todo en **una sola
 transacción** y rechaza respaldos de versiones más nuevas (migraciones que no existen
@@ -306,14 +303,14 @@ database/seeders/                        — DemoDataSeeder (ficticio), GradeLev
 config/seguimiento.php                   — configuración propia (SSO, EMC, periodos, escala IB, respaldos)
 resources/views/pdf/ficha.blade.php      — plantilla del PDF; resources/fonts/pdf/ sus fuentes
 resources/js/pages/                      — reunion/, estudiantes/, compromisos/, apoyo/, admin/ (incl. importar, asignaciones, respaldos)
-app/Support/SupportStatistics.php        — cálculo de la estadística general del Dpto. de Apoyo
+app/Support/SupportStatistics.php        — estadística del Dpto. de Apoyo (desde las notas de la reunión)
 routes/web.php                           — todas las rutas (Inertia, sin API)
 ```
 
 ## Si vas a seguir construyendo
 
-1. Si el colegio quiere el informe de gestión completo (descripción, objetivo del plan
-   estratégico, evidencias, plan de acción por actividad), agregarlo sobre `support_activities`.
+1. Llevar a estrategias, compromisos y demás registros el cambio de grupo por año del
+   seguimiento (DECISIONES 29) para escribir en reuniones de años anteriores.
 2. Pruebas de la matriz de permisos contra `Scope` y decidir si las pruebas se suben.
 3. Plantillas de importación restantes y logo en el PDF.
 4. Fase 6: polling en la reunión, probar Docker y el pipeline de release.

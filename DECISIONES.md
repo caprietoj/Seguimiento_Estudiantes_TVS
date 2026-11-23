@@ -160,44 +160,44 @@ construir. Se actualiza en cada fase.
     del catálogo por el nombre del grado ("10.°"); los importadores funcionan con la
     numeración antigua y con la nueva.
 
-## Dpto. de Apoyo: estadística general e importación 2025-2026 (13 nov 2026)
+## Dpto. de Apoyo: notas por estudiante y estadística general (13 y 23 nov 2026)
 
-25. **La estadística sale de un registro de actividades, no de los aportes.** La hoja
-    «ESTADÍSTICA GRAL» del informe de gestión cuenta estudiantes en seguimiento, familias
-    atendidas, reuniones de seguimiento, PIAR y crisis por grado y área. Nada de eso se
-    puede deducir de los aportes de la ficha (el Dpto. escribe sobre *todos* los
-    estudiantes del grupo en cada reunión, no solo sobre su caseload). Por eso se creó la
-    tabla `support_activities` (área × tipo × grupo × estudiante opcional × cantidad ×
-    fecha/semestre) y la estadística se calcula de ahí. `quantity` permite registrar cifras
-    agregadas («3 reuniones en 7A») cuando no hay registro uno a uno.
+25. **La estadística sale de las notas que cada área registra en la reunión de grupo.** Cada
+    nota de Psicología, Fonoaudiología, T.O. o Neuropsicología tiene el formato del colegio
+    (habilidades/observación en `body`, `agreements`, `strategy_follow_up`) y cuatro marcas
+    Sí/No en `contributions`: `in_follow_up`, `family_attended`, `piar_meeting`,
+    `crisis_attention` (enum `SupportFlag`). Se ven en la reunión y en la ficha (y su PDF), y
+    se pueden corregir (`PUT /aportes/{id}`, quien la escribió o quien puede borrarla).
+    *Primera versión descartada (13 nov):* un registro de actividades aparte
+    (`support_activities`); el colegio quiere que las cifras salgan de lo que cada psicóloga
+    registra por estudiante en la reunión, no de un segundo registro.
 
-26. **«Estudiantes con seguimiento» cuenta personas distintas.** Por área, un estudiante
-    cuenta una vez; en el total, una vez aunque lo acompañen varias áreas. Los registros sin
-    estudiante suman su cantidad. Las actividades sin grupo van en la fila «Todo el
-    colegio» y en los totales, no en las gráficas por curso.
+26. **Cómo se cuenta cada indicador** (`App\Support\SupportStatistics`), por grupo × área:
+    estudiantes en seguimiento = estudiantes distintos con la marca (en el total, una vez
+    aunque lo vean varias áreas); familias, PIAR y crisis = notas con la marca; reuniones de
+    seguimiento = seguimientos en que el área registró al menos una nota de un estudiante
+    del grupo. Cada nota cuenta en el grupo en que el estudiante estaba matriculado ese año.
 
-27. **Semestre escolar: I = julio–diciembre, II = enero–junio** (calendario B). Se deduce de
-    la fecha si no se indica. El informe de gestión del colegio es por semestre; los
-    seguimientos de la app son por periodo (3 × 2), así que el filtro de la estadística es
-    por semestre.
+27. **Filtro de tiempo por periodos.** Año completo, I semestre (periodo 1), II semestre
+    (periodos 2 y 3) o un periodo; los semestres se configuran en `seguimiento.semestres`.
 
 28. **Quién ve qué.** Ven la estadística Admin, Dpto. de Apoyo y EMC (EMC con sección solo
-    los grupos de su sección); registran actividades solo Admin y Dpto. de Apoyo
-    (`Scope::supportStatsSee`, `Scope::supportActivitiesWrite`, gates `apoyo-ver` y
-    `apoyo-registrar`). Los profesores no tienen la pestaña.
+    los grupos de su sección): `Scope::supportStatsSee`, gate `apoyo-ver`. Escribir notas
+    del Dpto. sigue las reglas de siempre (`Scope::writesField`).
 
-29. **El seguimiento del Dpto. (habilidades / acuerdos / seguimiento a las estrategias) entra
-    como un solo aporte del área, con las partes rotuladas**, no como estrategias. En el
-    Excel del colegio muchos «acuerdos» son «No requiere estrategias desde el área»;
-    convertirlos en estrategias individuales llenaría la reunión de grupo de ruido. Se
-    conservan íntegros en la ficha (Apoyos internos → área).
+29. **Notas en años anteriores.** `ContributionController` busca el grupo del estudiante en
+    el año del seguimiento, no en el año activo (antes devolvía 422 al escribir en una
+    reunión de 2025-2026 si el estudiante no tenía matrícula en el año activo).
 
-30. **Fecha del Excel → seguimiento de la app.** El Excel del Dpto. tiene bloques por fecha,
-    no por periodo. El convertidor asigna por mes (ago–oct P1·S1, nov–dic P1·S2, ene–feb
-    P2·S1, mar P2·S2, abr–may P3·S1, jun P3·S2) y, si dos bloques caen en el mismo
-    seguimiento, corre el segundo al siguiente. La tabla de asignación queda en la hoja
-    «LEER - fechas y seguimientos» del archivo, y el archivo plano permite corregir
-    «Periodo»/«Seguimiento» antes de importar.
+30. **Importación 2025-2026.** El Excel del Dpto. tiene bloques por fecha, no por periodo: el
+    convertidor asigna por mes (ago–oct P1·S1, nov–dic P1·S2, ene–feb P2·S1, mar P2·S2,
+    abr–may P3·S1, jun P3·S2) y, si dos bloques caen en el mismo seguimiento, corre el
+    segundo al siguiente; la asignación queda en la hoja «LEER» del archivo. La hoja
+    EMPALME entra como nota de cierre (P3·S2) con «En seguimiento» = Sí. Familias, PIAR y
+    crisis no se registraron por estudiante en 2025-2026: esas columnas van vacías (las
+    menciones en el texto —«se citará a papás», «entra en crisis», «tiene PIAR»— no
+    equivalen a la actividad). Reimportar agrega marcas nuevas a una nota igual, nunca las
+    quita.
 
 31. **Hermanos no se emparejan solos.** `NameMatcher` ya separaba Daniel/Daniela; ahora
     también Olivia/Sofía Manfriani Collazos: mismos dos apellidos y un nombre que no se
@@ -215,7 +215,6 @@ construir. Se actualiza en cada fase.
   asignatura.
 - El dominio real y el proveedor de hosting (sección "Decisiones ya tomadas", punto 4 del
   encargo): todo depende de `APP_URL`, así que no bloquea nada.
-- Estadística del Dpto.: si las «Reuniones de seguimiento» del I semestre 2025-2026 se
-  deben cargar (el informe recibido es solo del II semestre) y qué cifra vale cuando el
-  informe trae dos distintas para lo mismo (p. ej. Psicología 7.°–9.°: 18 en el total y 25
-  en el detalle por curso; se usó el detalle).
+- Estrategias, compromisos, apoyos externos y demás registros aún buscan el grupo del año
+  activo (`currentGroup()`); para escribirlos en reuniones de años anteriores conviene el
+  mismo cambio que en los aportes (DECISIONES 29).

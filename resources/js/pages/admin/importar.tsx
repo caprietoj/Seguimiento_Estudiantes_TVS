@@ -59,9 +59,7 @@ const DESCRIPTIONS: Record<string, string> = {
     teaching_assignments:
         'Una fila por profesor, grupo y asignatura (o dirección de grupo). Define qué grupos ve cada docente que entra desde la intranet.',
     support_notes:
-        'Lo que Psicología, Fonoaudiología, T.O. y Neuropsicología registran de cada estudiante en cada seguimiento (habilidades, acuerdos y seguimiento a las estrategias). Queda en la ficha, en Dpto. de apoyo.',
-    support_activities:
-        'Estudiantes en seguimiento, familias atendidas, reuniones de seguimiento, PIAR, crisis y demás actividades del departamento. Alimenta Dpto. de Apoyo · Estadística general.',
+        'Una fila por estudiante, área y seguimiento: habilidades, acuerdos/estrategias, seguimiento a las estrategias y las marcas (en seguimiento, familia atendida, PIAR, crisis). Queda en la reunión de grupo y en la ficha, y alimenta Dpto. de Apoyo · Estadística general.',
 };
 
 const MAPPING = [

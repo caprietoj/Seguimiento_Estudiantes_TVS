@@ -2,23 +2,24 @@
 
 namespace App\Support\Import;
 
-use App\Enums\SupportArea;
+use App\Enums\ContributionField;
+use App\Enums\SupportFlag;
 use App\Models\Contribution;
 use App\Models\ExternalSupport;
 use App\Models\FollowUp;
 use App\Models\Student;
 
 /**
- * Plantilla «Seguimiento del Dpto. de Apoyo (por área)»: lo que cada área (Psicología,
+ * Plantilla «Notas del Dpto. de Apoyo por estudiante»: lo que cada área (Psicología,
  * Fonoaudiología, Terapia ocupacional, Neuropsicología) registró de cada estudiante en cada
- * seguimiento. Es la versión plana del Excel «Seguimiento Dpto. de Apoyo» del colegio (una hoja
- * por curso con bloques por fecha) y de la hoja «EMPALME» del informe de gestión.
+ * seguimiento, igual que si lo hubiera escrito en la reunión de grupo. Es la versión plana del
+ * Excel «Seguimiento Dpto. de Apoyo» del colegio (una hoja por curso con bloques por fecha) y
+ * de la hoja «EMPALME» del informe de gestión.
  *
- * Cada fila es un estudiante × área × seguimiento y se guarda como un aporte del área en la
- * ficha (Dpto. de apoyo → Psicología, Fonoaudiología…). Las tres partes del formato del colegio
- * (habilidades, acuerdos/estrategias y seguimiento a las estrategias) quedan en el mismo aporte,
- * rotuladas. Si la fila dice que el estudiante tiene profesional externo, se registra además
- * como apoyo externo.
+ * Cada fila es un estudiante × área × seguimiento y se guarda como la nota del área: habilidades
+ * (body), acuerdos/estrategias, seguimiento a las estrategias y las marcas de la estadística
+ * (en seguimiento, familia atendida, reunión PIAR, atención en crisis). Si la fila dice que el
+ * estudiante tiene profesional externo, se registra además como apoyo externo.
  */
 class SupportNotesImporter extends Importer
 {
@@ -28,6 +29,7 @@ class SupportNotesImporter extends Importer
     public const TEMPLATE = [
         'Grupo', 'Estudiante', 'Código institucional', 'Periodo', 'Seguimiento', 'Fecha', 'Área',
         'Habilidades / observación', 'Acuerdos / estrategias', 'Seguimiento a las estrategias',
+        'En seguimiento', 'Familia atendida', 'Reunión PIAR', 'Atención en crisis',
         'Profesional externo', '¿Cuál?',
     ];
 
@@ -43,6 +45,10 @@ class SupportNotesImporter extends Importer
         'skills' => ['habilidades observacion', 'habilidades', 'habilidades mencionadas', 'observacion', 'observacion cierre de ano'],
         'agreements' => ['acuerdos estrategias', 'acuerdos', 'estrategias', 'acuerdo estrategia'],
         'review' => ['seguimiento a las estrategias', 'seguimiento estrategias', 'seguimiento a estrategias'],
+        'in_follow_up' => ['en seguimiento', 'estudiante en seguimiento', 'caso'],
+        'family_attended' => ['familia atendida', 'familias atendidas', 'se atendio a la familia'],
+        'piar_meeting' => ['reunion piar', 'piar'],
+        'crisis_attention' => ['atencion en crisis', 'crisis', 'intervencion en crisis'],
         'external' => ['profesional externo', 'profesion externo', 'apoyo externo'],
         'external_which' => ['cual', 'especialidad externa', 'profesional'],
     ];
@@ -107,8 +113,7 @@ class SupportNotesImporter extends Importer
             return;
         }
 
-        $area = SupportArea::fromText($get('area'));
-        $field = $area?->contributionField();
+        $field = ContributionField::clinicalFromText($get('area'));
 
         if ($field === null) {
             $report->error($sheet, $r, "Área «{$get('area')}» no reconocida. Usa Psicología, Fonoaudiología, Terapia ocupacional o Neuropsicología.");
@@ -136,41 +141,67 @@ class SupportNotesImporter extends Importer
             return;
         }
 
-        $body = self::composeBody($get('skills'), $get('agreements'), $get('review'));
+        $content = [
+            'body' => $get('skills'),
+            'agreements' => $get('agreements') !== '' ? $get('agreements') : null,
+            'strategy_follow_up' => $get('review') !== '' ? $get('review') : null,
+        ];
+        $flags = [];
+        foreach (SupportFlag::columns() as $flag) {
+            $flags[$flag] = self::yes($get($flag));
+        }
+        $hasContent = $content['body'] !== '' || $content['agreements'] !== null || $content['strategy_follow_up'] !== null || in_array(true, $flags, true);
         $added = 0;
 
-        if ($body !== '') {
+        if ($hasContent) {
             $existing = Contribution::withTrashed()
                 ->where('student_id', $student->id)
                 ->where('follow_up_id', $followUp->id)
                 ->where('field', $field->value)
-                ->where('body', $body)
+                ->where('body', $content['body'])
+                ->where('agreements', $content['agreements'])
+                ->where('strategy_follow_up', $content['strategy_follow_up'])
                 ->first();
 
-            if ($existing?->trashed()) {
+            if ($existing !== null) {
+                $wasTrashed = $existing->trashed();
                 $existing->restore();
-                $report->count('Aportes restaurados');
-                $added++;
-            } elseif ($existing !== null) {
-                $report->count('Aportes que ya existían (omitidos)');
+                // Una marca en «Sí» se agrega a la nota existente; nunca se quita una marca.
+                $newFlags = array_filter($flags, fn (bool $on, string $flag) => $on && ! $existing->{$flag}, ARRAY_FILTER_USE_BOTH);
+                if ($newFlags !== []) {
+                    $existing->update($newFlags);
+                    $report->count('Notas con marcas actualizadas');
+                    $added++;
+                } elseif ($wasTrashed) {
+                    $report->count('Notas restauradas');
+                    $added++;
+                } else {
+                    $report->count('Notas que ya existían (omitidas)');
+                }
             } else {
                 $contribution = new Contribution([
                     'student_id' => $student->id,
                     'follow_up_id' => $followUp->id,
                     'field' => $field,
-                    'body' => $body,
+                    ...$content,
+                    ...$flags,
                     'author_id' => $this->user->id,
                 ]);
                 $this->stamp($contribution, $r);
                 $contribution->save();
-                $report->count('Aportes · '.$field->label());
+                $report->count('Notas · '.$field->label());
+                foreach (SupportFlag::cases() as $flag) {
+                    if ($flags[$flag->value]) {
+                        $report->count('Marca · '.$flag->shortLabel());
+                    }
+                }
                 $added++;
             }
         }
 
-        $added += $this->external($student, $area, $followUp, $get('external'), $get('external_which'), $report, $r);
+        $added += $this->external($student, $field, $followUp, $get('external'), $get('external_which'), $report, $r);
 
-        if ($body === '' && $added === 0) {
+        if (! $hasContent && $added === 0) {
             $report->warning($sheet, $r, "{$student->full_name}: la fila no trae información para importar.");
         }
 
@@ -181,27 +212,9 @@ class SupportNotesImporter extends Importer
             'estudiante' => $student->full_name,
             'grupo' => $group->code,
             'seguimiento' => $followUp->shortLabel(),
-            'área' => $area->label(),
+            'área' => $field->label(),
             'registros' => $added,
         ]);
-    }
-
-    /** Une las tres partes del formato del colegio en un solo texto, rotulando las que no son la primera. */
-    public static function composeBody(string $skills, string $agreements, string $review): string
-    {
-        $parts = [];
-
-        if ($skills !== '') {
-            $parts[] = $skills;
-        }
-        if ($agreements !== '') {
-            $parts[] = 'Acuerdos / estrategias: '.$agreements;
-        }
-        if ($review !== '') {
-            $parts[] = 'Seguimiento a las estrategias: '.$review;
-        }
-
-        return implode("\n\n", $parts);
     }
 
     private function followUp(string $period, string $number): ?FollowUp
@@ -219,7 +232,7 @@ class SupportNotesImporter extends Importer
             ->first();
     }
 
-    private function external(Student $student, SupportArea $area, FollowUp $followUp, string $flag, string $which, ImportReport $report, int $row): int
+    private function external(Student $student, ContributionField $area, FollowUp $followUp, string $flag, string $which, ImportReport $report, int $row): int
     {
         if (! self::yes($flag)) {
             return 0;

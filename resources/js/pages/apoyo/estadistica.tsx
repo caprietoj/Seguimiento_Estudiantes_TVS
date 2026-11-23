@@ -1,4 +1,4 @@
-import { AREA_COLORS, ApoyoNav } from '@/components/apoyo/apoyo-nav';
+import { AREA_COLORS } from '@/components/apoyo/area-colors';
 import { ChartLegend, GroupedBarChart, type ChartSeries } from '@/components/apoyo/grouped-bar-chart';
 import SeguimientoLayout from '@/layouts/seguimiento-layout';
 import { Head, Link, router } from '@inertiajs/react';
@@ -33,51 +33,41 @@ interface Indicator {
 interface Props {
     years: { id: number; name: string }[];
     sections: { id: number; name: string }[];
-    filters: { anio: number; semestre: string; seccion: string };
+    scopes: { value: string; label: string }[];
+    filters: { anio: number; periodo: string; seccion: string };
     yearName: string;
-    canWrite: boolean;
     stats: {
         areas: Area[];
         indicators: Indicator[];
-        others: { type: string; label: string; values: Record<string, number>; total: number }[];
         cases: { student_id: number; name: string; group: string; areas: string[] }[];
-        activities_count: number;
-        unknown_semester: number;
+        notes_count: number;
     };
 }
-
-const OTHER_AREAS: { value: string; label: string }[] = [
-    { value: 'psychology', label: 'Psicología' },
-    { value: 'ot', label: 'T.O.' },
-    { value: 'speech', label: 'Fono' },
-    { value: 'neuro', label: 'Neuro' },
-    { value: 'team', label: 'Equipo' },
-];
 
 function query(filters: Props['filters'], change: Partial<Props['filters']>) {
     const f = { ...filters, ...change };
     const q: Record<string, string> = { anio: String(f.anio) };
-    if (f.semestre !== 'todo') q.semestre = f.semestre;
+    if (f.periodo !== 'todo') q.periodo = f.periodo;
     if (f.seccion !== 'todas') q.seccion = f.seccion;
     return q;
 }
 
-export default function Estadistica({ years, sections, filters, yearName, canWrite, stats }: Props) {
+export default function Estadistica({ years, sections, scopes, filters, yearName, stats }: Props) {
     const series: ChartSeries[] = stats.areas.map((a) => ({ key: a.value, label: a.label, color: AREA_COLORS[a.value] ?? '#888' }));
     const go = (change: Partial<Props['filters']>) => router.get('/apoyo/estadistica', query(filters, change), { preserveScroll: true });
     const excelHref = '/apoyo/estadistica/excel?' + new URLSearchParams(query(filters, {})).toString();
-    const periodLabel = filters.semestre === 'todo' ? 'año completo' : filters.semestre === '1' ? 'I semestre' : 'II semestre';
+    const periodLabel = (scopes.find((x) => x.value === filters.periodo)?.label ?? 'Año completo').toLowerCase();
 
     return (
         <SeguimientoLayout>
             <Head title="Estadística general · Dpto. de Apoyo" />
-            <ApoyoNav yearId={filters.anio} />
 
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                 <div>
                     <h2 className="font-display text-primary text-2xl">Estadística general</h2>
                     <p className="text-muted-foreground text-sm">
-                        Departamento de Apoyo · {yearName} · {periodLabel}. Se calcula con las actividades registradas.
+                        Departamento de Apoyo · {yearName} · {periodLabel}. Se calcula con las notas que cada área registra por estudiante en la
+                        reunión de grupo.
                     </p>
                 </div>
 
@@ -100,12 +90,14 @@ export default function Estadistica({ years, sections, filters, yearName, canWri
                         <span className="text-muted-foreground mb-0.5 block">Periodo</span>
                         <select
                             className="border-input bg-background h-9 rounded-md border px-2 text-sm"
-                            value={filters.semestre}
-                            onChange={(e) => go({ semestre: e.target.value })}
+                            value={filters.periodo}
+                            onChange={(e) => go({ periodo: e.target.value })}
                         >
-                            <option value="todo">Año completo</option>
-                            <option value="1">I semestre (jul–dic)</option>
-                            <option value="2">II semestre (ene–jun)</option>
+                            {scopes.map((x) => (
+                                <option key={x.value} value={x.value}>
+                                    {x.label}
+                                </option>
+                            ))}
                         </select>
                     </label>
                     <label className="text-xs">
@@ -132,21 +124,15 @@ export default function Estadistica({ years, sections, filters, yearName, canWri
                 </div>
             </div>
 
-            {stats.unknown_semester > 0 && (
-                <p className="bg-warn-soft text-warn mb-4 rounded-md px-3 py-2 text-sm">
-                    {stats.unknown_semester} actividad(es) de este año no tienen fecha ni semestre, así que no se cuentan al filtrar por semestre.
-                </p>
-            )}
-
-            {stats.activities_count === 0 ? (
+            {stats.notes_count === 0 ? (
                 <div className="border-border bg-card rounded-lg border p-8 text-center">
-                    <p className="font-semibold">Todavía no hay actividades registradas con estos filtros.</p>
+                    <p className="font-semibold">Todavía no hay notas del Dpto. de Apoyo con estos filtros.</p>
                     <p className="text-muted-foreground mt-1 text-sm">
-                        Regístralas en{' '}
-                        <Link href={`/apoyo/actividades?anio=${filters.anio}`} className="text-primary underline">
-                            Registro de actividades
-                        </Link>
-                        {canWrite ? ' o impórtalas en Administración · Importar («Actividades del Dpto. de Apoyo»).' : '.'}
+                        Las cifras salen de lo que Psicología, Fonoaudiología, T.O. y Neuropsicología registran por estudiante en{' '}
+                        <Link href="/reunion" className="text-primary underline">
+                            Reunión de grupo
+                        </Link>{' '}
+                        con sus marcas: en seguimiento, familia atendida, reunión PIAR y atención en crisis.
                     </p>
                 </div>
             ) : (
@@ -170,13 +156,20 @@ export default function Estadistica({ years, sections, filters, yearName, canWri
                         <IndicatorBlock key={ind.type} n={i + 1} indicator={ind} areas={stats.areas} series={series} />
                     ))}
 
-                    <OthersTable others={stats.others} />
                     <CasesList cases={stats.cases} />
                 </>
             )}
         </SeguimientoLayout>
     );
 }
+
+const HOW: Record<string, string> = {
+    students: 'Estudiantes distintos con la marca «En seguimiento» en alguna nota del área.',
+    families: 'Notas del área con la marca «Se atendió a la familia».',
+    meetings: 'Reuniones de grupo (seguimientos) en que el área registró al menos una nota de un estudiante del grupo.',
+    piar: 'Notas del área con la marca «Reunión PIAR».',
+    crisis: 'Notas del área con la marca «Atención en crisis».',
+};
 
 function IndicatorBlock({ n, indicator, areas, series }: { n: number; indicator: Indicator; areas: Area[]; series: ChartSeries[] }) {
     const [showSections, setShowSections] = useState(false);
@@ -187,9 +180,12 @@ function IndicatorBlock({ n, indicator, areas, series }: { n: number; indicator:
     return (
         <section id={`ind-${indicator.type}`} className="border-border bg-card mb-5 scroll-mt-4 rounded-lg border p-4">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-                <h3 className="text-primary text-base font-semibold">
-                    {n}. {indicator.title}
-                </h3>
+                <div>
+                    <h3 className="text-primary text-base font-semibold">
+                        {n}. {indicator.title}
+                    </h3>
+                    <p className="text-muted-foreground text-xs">{HOW[indicator.type]}</p>
+                </div>
                 <div className="text-muted-foreground text-xs">
                     Total: <span className="text-foreground font-mono font-semibold">{indicator.total}</span>
                     {indicator.per_student ? ' estudiantes distintos' : ''}
@@ -283,48 +279,6 @@ function IndicatorBlock({ n, indicator, areas, series }: { n: number; indicator:
                     </div>
                 </div>
             )}
-        </section>
-    );
-}
-
-function OthersTable({ others }: { others: Props['stats']['others'] }) {
-    if (others.length === 0) return null;
-    const used = OTHER_AREAS.filter((a) => others.some((o) => o.values[a.value] > 0));
-
-    return (
-        <section className="border-border bg-card mb-5 rounded-lg border p-4">
-            <h3 className="text-primary mb-3 text-base font-semibold">Otras actividades del departamento</h3>
-            <div className="overflow-x-auto">
-                <table className="w-full max-w-3xl text-sm">
-                    <thead>
-                        <tr className="border-border text-muted-foreground border-b text-left text-xs">
-                            <th className="py-1.5 pr-2 font-semibold">Actividad</th>
-                            {used.map((a) => (
-                                <th key={a.value} className="px-2 py-1.5 text-right font-semibold">
-                                    {a.label}
-                                </th>
-                            ))}
-                            <th className="py-1.5 pl-2 text-right font-semibold">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {others.map((o) => (
-                            <tr key={o.type} className="border-border/60 border-b">
-                                <td className="py-1 pr-2">{o.label}</td>
-                                {used.map((a) => (
-                                    <td
-                                        key={a.value}
-                                        className={'px-2 py-1 text-right font-mono ' + (o.values[a.value] ? '' : 'text-muted-foreground/50')}
-                                    >
-                                        {o.values[a.value]}
-                                    </td>
-                                ))}
-                                <td className="py-1 pl-2 text-right font-mono font-semibold">{o.total}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
         </section>
     );
 }

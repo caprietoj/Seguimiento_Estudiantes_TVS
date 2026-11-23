@@ -464,9 +464,11 @@
             @foreach ($supportsWithNotes as $area)
                 <div class="area-title semi">{{ $area['label'] }}</div>
                 @foreach ($area['notes'] as $n)
-                    <div class="note grey{{ mb_strlen($n['body']) > 280 ? ' long' : '' }}">
-                        <div class="note-body">{{ $n['body'] }}</div>
-                        <div class="note-meta"><span class="chip">{{ $n['follow_up_label'] }}</span>{{ $n['author_name'] }}</div>
+                    <div class="note grey{{ mb_strlen($n['body'].($n['agreements'] ?? '').($n['strategy_follow_up'] ?? '')) > 280 ? ' long' : '' }}">
+                        @if ($n['body'] !== '')<div class="note-body">{{ $n['body'] }}</div>@endif
+                        @if (! empty($n['agreements']))<div class="note-body"><b class="semi">Acuerdos / estrategias:</b> {{ $n['agreements'] }}</div>@endif
+                        @if (! empty($n['strategy_follow_up']))<div class="note-body"><b class="semi">Seguimiento a las estrategias:</b> {{ $n['strategy_follow_up'] }}</div>@endif
+                        <div class="note-meta"><span class="chip">{{ $n['follow_up_label'] }}</span>@foreach ($n['flags'] ?? [] as $flag)<span class="chip">{{ $flag['label'] }}</span>@endforeach{{ $n['author_name'] }}</div>
                     </div>
                 @endforeach
             @endforeach
