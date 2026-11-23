@@ -30,6 +30,15 @@ interface Indicator {
     total: number;
 }
 
+interface Source {
+    key: string;
+    label: string;
+    detail: string | null;
+    values: Record<string, number>;
+    total: number;
+    marked: number;
+}
+
 interface Props {
     years: { id: number; name: string }[];
     sections: { id: number; name: string }[];
@@ -41,6 +50,7 @@ interface Props {
         indicators: Indicator[];
         cases: { student_id: number; name: string; group: string; areas: string[] }[];
         notes_count: number;
+        sources: Source[];
     };
 }
 
@@ -137,6 +147,7 @@ export default function Estadistica({ years, sections, scopes, filters, yearName
                 </div>
             ) : (
                 <>
+                    <SourcesPanel sources={stats.sources} areas={stats.areas} />
                     <div className="mb-5 grid grid-cols-2 gap-2 md:grid-cols-5">
                         {stats.indicators.map((ind, i) => (
                             <a
@@ -160,6 +171,55 @@ export default function Estadistica({ years, sections, scopes, filters, yearName
                 </>
             )}
         </SeguimientoLayout>
+    );
+}
+
+/** De dónde salen las notas contadas: cada importación o lo registrado en la reunión/ficha. */
+function SourcesPanel({ sources, areas }: { sources: Source[]; areas: Area[] }) {
+    return (
+        <section className="border-border bg-card mb-5 rounded-lg border p-4">
+            <h3 className="text-primary text-sm font-semibold">¿De dónde salen estas cifras?</h3>
+            <p className="text-muted-foreground mb-2 text-xs">
+                Notas del Dpto. de Apoyo de este año y periodo que se están contando, según su origen. Una importación equivocada se puede revertir en
+                Administración · Importar.
+            </p>
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                    <thead>
+                        <tr className="border-border text-muted-foreground border-b text-left text-xs">
+                            <th className="py-1.5 pr-2 font-semibold">Origen</th>
+                            {areas.map((a) => (
+                                <th key={a.value} className="px-2 py-1.5 text-right font-semibold">
+                                    {a.short}
+                                </th>
+                            ))}
+                            <th className="px-2 py-1.5 text-right font-semibold">Notas</th>
+                            <th className="py-1.5 pl-2 text-right font-semibold">Con marcas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {sources.map((src) => (
+                            <tr key={src.key} className="border-border/60 border-b align-top">
+                                <td className="py-1.5 pr-2">
+                                    <div className="font-semibold">{src.label}</div>
+                                    {src.detail && <div className="text-muted-foreground text-xs">{src.detail}</div>}
+                                </td>
+                                {areas.map((a) => (
+                                    <td key={a.value} className="px-2 py-1.5 text-right font-mono">
+                                        {src.values[a.value]}
+                                    </td>
+                                ))}
+                                <td className="px-2 py-1.5 text-right font-mono font-semibold">{src.total}</td>
+                                <td className="py-1.5 pl-2 text-right font-mono">{src.marked}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            <p className="text-muted-foreground mt-2 text-xs">
+                «Con marcas» son las notas con en seguimiento, familia atendida, PIAR o crisis; las demás solo cuentan en «Reuniones de seguimiento».
+            </p>
+        </section>
     );
 }
 

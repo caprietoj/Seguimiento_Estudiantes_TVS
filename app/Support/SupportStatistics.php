@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Enums\ContributionField;
 use App\Models\GradeLevel;
 use App\Models\Group;
+use App\Models\ImportBatch;
 use App\Models\SchoolYear;
 use App\Models\User;
 use Illuminate\Database\Query\Builder;
@@ -120,6 +121,7 @@ class SupportStatistics
             'indicators' => $indicators,
             'cases' => self::cases($base()),
             'notes_count' => (int) $agg->sum('notes'),
+            'sources' => self::sources($base(), $areas),
         ];
     }
 
@@ -164,6 +166,49 @@ class SupportStatistics
             // En «estudiantes» el total cuenta a cada estudiante una vez aunque lo vean varias áreas.
             'total' => $def['per_student'] ? $distinctStudents : array_sum($totals),
         ];
+    }
+
+    /**
+     * De dónde salen las notas que se cuentan: cada importación (archivo, plantilla, fecha y
+     * quién) o «registradas en la reunión / ficha». Así se puede verificar que las cifras
+     * corresponden a datos reales y revertir una importación equivocada.
+     *
+     * @param  list<ContributionField>  $areas
+     * @return list<array<string, mixed>>
+     */
+    private static function sources(Builder $query, array $areas): array
+    {
+        $rows = $query->groupBy('c.import_batch_id', 'c.field')
+            ->selectRaw('c.import_batch_id, c.field, COUNT(*) as notes'
+                .', SUM(CASE WHEN c.in_follow_up = 1 OR c.family_attended = 1 OR c.piar_meeting = 1 OR c.crisis_attention = 1 THEN 1 ELSE 0 END) as marked')
+            ->get();
+
+        $batches = ImportBatch::with('user:id,name')->whereIn('id', $rows->pluck('import_batch_id')->filter()->unique())->get()->keyBy('id');
+
+        return $rows->groupBy(fn ($r) => (string) ($r->import_batch_id ?? 'manual'))
+            ->map(function (Collection $items, string $key) use ($batches, $areas) {
+                $batch = $key === 'manual' ? null : $batches->get((int) $key);
+                $values = [];
+                foreach ($areas as $area) {
+                    $values[$area->value] = (int) ($items->firstWhere('field', $area->value)->notes ?? 0);
+                }
+
+                return [
+                    'key' => $key,
+                    'label' => $key === 'manual'
+                        ? 'Registradas en la reunión de grupo o la ficha'
+                        : ($batch !== null ? "Importación «{$batch->file_name}»" : "Importación #{$key} (ya no está en el historial)"),
+                    'detail' => $batch !== null
+                        ? $batch->template_type->label().' · '.$batch->created_at?->format('d/m/Y H:i').' · '.($batch->user->name ?? '')
+                        : null,
+                    'values' => $values,
+                    'total' => (int) $items->sum('notes'),
+                    'marked' => (int) $items->sum('marked'),
+                ];
+            })
+            ->sortBy(fn (array $s) => $s['key'] === 'manual' ? 0 : 1)
+            ->values()
+            ->all();
     }
 
     /**
