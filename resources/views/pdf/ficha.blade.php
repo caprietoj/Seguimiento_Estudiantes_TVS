@@ -300,6 +300,7 @@
                                         <span class="muted">—</span>
                                     @else
                                         <div class="lvl-cell semi {{ $levelClass($lv) }}">{{ $lv }}</div>
+                                        <div class="muted" style="font-size: 7pt;">{{ $row['indicators'][$p] ?? '' }}</div>
                                     @endif
                                 </td>
                             @endfor

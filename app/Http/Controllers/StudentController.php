@@ -9,6 +9,7 @@ use App\Models\Contribution;
 use App\Models\DisciplinaryCase;
 use App\Models\Enrollment;
 use App\Models\ExternalSupport;
+use App\Models\Grade;
 use App\Models\GradeLevel;
 use App\Models\Group;
 use App\Models\MapScore;
@@ -312,21 +313,27 @@ class StudentController extends Controller
             ];
         }
 
-        $subjects = Subject::active()->forGroup($group, $selectedYear->id)->orderBy('name')->get();
+        $subjects = $student->subjectsForYear($selectedYear->id)->orderBy('name')->get();
+        if ($subjects->isEmpty()) {
+            $subjects = Subject::active()->forGroup($group, $selectedYear->id)->orderBy('name')->get();
+        }
         $gradesByKey = $student->grades()->where('school_year_id', $selectedYear->id)->get()
             ->keyBy(fn ($g) => $g->subject_id.'|'.$g->period);
         $ibPeriods = (int) Setting::get('ib_periodos', config('seguimiento.periodos', 3));
         $performance = $subjects->map(function (Subject $subject) use ($gradesByKey, $user, $group, $ibPeriods) {
             $levels = [];
+            $indicators = [];
             for ($p = 1; $p <= $ibPeriods; $p++) {
                 $grade = $gradesByKey->get($subject->id.'|'.$p);
                 $levels[$p] = $grade?->level;
+                $indicators[$p] = Grade::performanceLabel($grade?->level);
             }
 
             return [
                 'subject_id' => $subject->id,
                 'subject' => $subject->name,
                 'levels' => $levels,
+                'indicators' => $indicators,
                 'can_write' => Scope::gradeWrite($user, $group, $subject),
             ];
         })->values();

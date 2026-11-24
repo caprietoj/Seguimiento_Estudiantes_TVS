@@ -51,6 +51,18 @@ class Grade extends Model
         return $this->belongsTo(ImportBatch::class);
     }
 
+    /** Indicador cualitativo de Phidias para la nota (1-2 Bajo, 3 Básico, 4 Alto, 5-7 Superior). */
+    public static function performanceLabel(?int $level): ?string
+    {
+        return match (true) {
+            $level === null => null,
+            $level <= 2 => 'Desempeño Bajo',
+            $level === 3 => 'Desempeño Básico',
+            $level === 4 => 'Desempeño Alto',
+            default => 'Desempeño Superior',
+        };
+    }
+
     /** Nivel 1-2 bajo, 3 en riesgo, 4 adecuado, 5-7 bueno a excelente (sección 6). */
     public function band(): string
     {

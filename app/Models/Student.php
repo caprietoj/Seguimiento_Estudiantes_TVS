@@ -149,4 +149,12 @@ class Student extends Model
 
         return $fromStrategies->merge($fromCommitments)->unique()->values();
     }
+
+    /** @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<Subject, $this> */
+    public function subjectsForYear(int $schoolYearId): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Subject::class, 'student_subjects')
+            ->withPivot('school_year_id')
+            ->wherePivot('school_year_id', $schoolYearId);
+    }
 }

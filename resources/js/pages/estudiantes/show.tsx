@@ -67,6 +67,7 @@ interface PerformanceRow {
     subject_id: number;
     subject: string;
     levels: Record<number, number | null>;
+    indicators: Record<number, string | null>;
     can_write: boolean;
 }
 
@@ -1007,6 +1008,11 @@ export default function FichaEstudiante(props: FichaProps) {
                                                     ) : (
                                                         <span className={'inline-block w-8 rounded px-1 py-0.5 font-mono ' + lvlClass(row.levels[p])}>
                                                             {row.levels[p] ?? '–'}
+                                                        </span>
+                                                    )}
+                                                    {row.indicators?.[p] && (
+                                                        <span className="text-muted-foreground mt-0.5 block text-[9px] leading-tight">
+                                                            {row.indicators[p]}
                                                         </span>
                                                     )}
                                                 </td>
