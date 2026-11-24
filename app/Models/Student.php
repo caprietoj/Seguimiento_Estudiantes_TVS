@@ -6,6 +6,7 @@ use Database\Factories\StudentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
@@ -127,10 +128,10 @@ class Student extends Model
         return $this->grades()
             ->where('school_year_id', $schoolYearId)
             ->where('period', $period)
-            ->whereNotNull('level')
-            ->where('level', '<=', $threshold)
             ->with('subject')
-            ->get();
+            ->get()
+            ->filter(fn (Grade $g) => $g->needsAttention($threshold))
+            ->values();
     }
 
     /**
@@ -150,8 +151,8 @@ class Student extends Model
         return $fromStrategies->merge($fromCommitments)->unique()->values();
     }
 
-    /** @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<Subject, $this> */
-    public function subjectsForYear(int $schoolYearId): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    /** @return BelongsToMany<Subject, $this> */
+    public function subjectsForYear(int $schoolYearId): BelongsToMany
     {
         return $this->belongsToMany(Subject::class, 'student_subjects')
             ->withPivot('school_year_id')

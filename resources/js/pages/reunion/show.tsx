@@ -71,8 +71,14 @@ interface NotesCellData {
 
 interface AsignaturaItem {
     subject: string;
-    level: number;
+    /** Nivel 1–7 o nota de Phidias en su escala («3,4/8»). */
+    level: number | string;
+    /** Desempeño bajo (rojo); si no viene, se usa el nivel ≤ 2. */
+    low?: boolean;
+    performance?: string | null;
 }
+
+const isLowGrade = (g: AsignaturaItem) => g.low ?? (typeof g.level === 'number' && g.level <= 2);
 
 interface SubjectAttentionCellData {
     notes: Note[];
@@ -472,13 +478,13 @@ function SubjectAttentionCard({ note, gradesAlert, onDelete }: { note: Note; gra
                         <span
                             className={
                                 'py-0.2 inline-flex items-center gap-0.5 rounded px-1.5 text-[10px] font-bold ' +
-                                (matchedGrade.level <= 2
+                                (isLowGrade(matchedGrade)
                                     ? 'border border-red-200 bg-red-100 text-red-700'
                                     : 'border border-amber-200 bg-amber-100 text-amber-800')
                             }
-                            title={`Nivel ${matchedGrade.level} en evaluación oficial`}
+                            title={`${matchedGrade.performance ?? 'Nivel ' + matchedGrade.level} en evaluación oficial`}
                         >
-                            <span>Nivel {matchedGrade.level}</span>
+                            <span>{typeof matchedGrade.level === 'number' ? `Nivel ${matchedGrade.level}` : matchedGrade.level}</span>
                             <span className="text-[9px]">⚠️</span>
                         </span>
                     )}
@@ -549,8 +555,8 @@ function SubjectAttentionCell({ studentId, followUpId, data }: { studentId: numb
                                 <span>{a.subject}</span>
                                 <span
                                     className={
-                                        'flex size-3.5 items-center justify-center rounded text-[9px] font-bold text-white ' +
-                                        (a.level <= 2 ? 'bg-red-600' : 'bg-amber-600')
+                                        'flex h-3.5 min-w-3.5 items-center justify-center rounded px-0.5 text-[9px] font-bold text-white ' +
+                                        (isLowGrade(a) ? 'bg-red-600' : 'bg-amber-600')
                                     }
                                 >
                                     {a.level}
@@ -856,7 +862,7 @@ function ContentCell({ col, student, followUpId }: { col: Column; student: Stude
                 {items.length === 0 ? (
                     <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10.5px] font-medium text-emerald-700">
                         <CheckCircle2 className="size-3" />
-                        Al día (sin alertas ≤3)
+                        Al día (sin asignaturas en Bajo o Básico)
                     </span>
                 ) : (
                     items.map((item) => (
@@ -864,14 +870,14 @@ function ContentCell({ col, student, followUpId }: { col: Column; student: Stude
                             key={item.subject}
                             className={
                                 'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold ' +
-                                (item.level <= 2 ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-800')
+                                (isLowGrade(item) ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-800')
                             }
                         >
                             <span>{item.subject}</span>
                             <span
                                 className={
-                                    'size-4 rounded text-center text-[10px] leading-4 font-bold ' +
-                                    (item.level <= 2 ? 'bg-red-600 text-white' : 'bg-amber-600 text-white')
+                                    'h-4 min-w-4 rounded px-0.5 text-center text-[10px] leading-4 font-bold ' +
+                                    (isLowGrade(item) ? 'bg-red-600 text-white' : 'bg-amber-600 text-white')
                                 }
                             >
                                 {item.level}

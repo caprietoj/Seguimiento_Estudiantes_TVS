@@ -8,6 +8,7 @@ enum ImportTemplateType: string
     case Users = 'users';
     case StudentsEnrollments = 'students_enrollments';
     case PhidiasStudents = 'phidias_students';
+    case PhidiasGrades = 'phidias_grades';
     case Groups = 'groups';
     case TeachingAssignments = 'teaching_assignments';
     case Grades = 'grades';
@@ -27,6 +28,7 @@ enum ImportTemplateType: string
             self::Users => 'Usuarios',
             self::StudentsEnrollments => 'Estudiantes y matrículas por año',
             self::PhidiasStudents => 'Estudiantes desde Phidias',
+            self::PhidiasGrades => 'Calificaciones desde Phidias (exportación data.csv)',
             self::Groups => 'Grupos y dirección de grupo',
             self::TeachingAssignments => 'Asignaciones de profesores',
             self::Grades => 'Calificaciones de asignaturas (IB)',

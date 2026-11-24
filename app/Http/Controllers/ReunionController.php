@@ -7,6 +7,7 @@ use App\Enums\RoleName;
 use App\Models\Commitment;
 use App\Models\Contribution;
 use App\Models\DisciplinaryCase;
+use App\Models\Grade;
 use App\Models\Group;
 use App\Models\SchoolYear;
 use App\Models\Strategy;
@@ -184,8 +185,8 @@ class ReunionController extends Controller
                     ])->values();
 
                     $alertGrades = $student->grades
-                        ->filter(fn ($g) => $g->level !== null && $g->level <= $threshold)
-                        ->map(fn ($g) => ['subject' => $g->subject->name, 'level' => $g->level])
+                        ->filter(fn (Grade $g) => $g->needsAttention($threshold))
+                        ->map(fn (Grade $g) => ['subject' => $g->subject->name, 'level' => $g->display(), 'low' => $g->isLow(), 'performance' => $g->performanceText()])
                         ->values();
 
                     $cells[$col['key']] = [
@@ -197,8 +198,8 @@ class ReunionController extends Controller
                 } elseif ($col['type'] === 'asignaturas') {
                     $threshold = (int) config('seguimiento.nivel_atencion', 3);
                     $cells[$col['key']] = $student->grades
-                        ->filter(fn ($g) => $g->level !== null && $g->level <= $threshold)
-                        ->map(fn ($g) => ['subject' => $g->subject->name, 'level' => $g->level])
+                        ->filter(fn (Grade $g) => $g->needsAttention($threshold))
+                        ->map(fn (Grade $g) => ['subject' => $g->subject->name, 'level' => $g->display(), 'low' => $g->isLow(), 'performance' => $g->performanceText()])
                         ->values();
                 } elseif ($col['type'] === 'estrategias') {
                     $list = ($individualStrategies->get($student->id) ?? collect())->map(fn (Strategy $s) => [
@@ -219,7 +220,7 @@ class ReunionController extends Controller
 
             $threshold = (int) config('seguimiento.nivel_atencion', 3);
             $attentionCount = $student->grades
-                ->filter(fn ($g) => $g->level !== null && $g->level <= $threshold)
+                ->filter(fn (Grade $g) => $g->needsAttention($threshold))
                 ->count();
 
             return [

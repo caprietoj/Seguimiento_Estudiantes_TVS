@@ -323,10 +323,16 @@ class StudentController extends Controller
         $performance = $subjects->map(function (Subject $subject) use ($gradesByKey, $user, $group, $ibPeriods) {
             $levels = [];
             $indicators = [];
+            $scores = [];
+            $bands = [];
             for ($p = 1; $p <= $ibPeriods; $p++) {
+                /** @var Grade|null $grade */
                 $grade = $gradesByKey->get($subject->id.'|'.$p);
                 $levels[$p] = $grade?->level;
-                $indicators[$p] = Grade::performanceLabel($grade?->level);
+                $indicators[$p] = $grade?->performanceText();
+                // Nota de Phidias en su escala («7,3/8»); null si es un nivel 1–7 registrado a mano.
+                $scores[$p] = $grade?->score !== null ? $grade->display() : null;
+                $bands[$p] = $grade?->band() ?? 'none';
             }
 
             return [
@@ -334,6 +340,8 @@ class StudentController extends Controller
                 'subject' => $subject->name,
                 'levels' => $levels,
                 'indicators' => $indicators,
+                'scores' => $scores,
+                'bands' => $bands,
                 'can_write' => Scope::gradeWrite($user, $group, $subject),
             ];
         })->values();

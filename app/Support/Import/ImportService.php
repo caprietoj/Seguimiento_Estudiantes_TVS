@@ -27,6 +27,7 @@ class ImportService
     public const SUPPORTED = [
         ImportTemplateType::CurrentFormat,
         ImportTemplateType::PhidiasStudents,
+        ImportTemplateType::PhidiasGrades,
         ImportTemplateType::StudentsEnrollments,
         ImportTemplateType::TeachingAssignments,
         ImportTemplateType::Grades,
@@ -41,6 +42,7 @@ class ImportService
             ImportTemplateType::CurrentFormat => new CurrentFormatImporter($year, $user, $options),
             ImportTemplateType::StudentsEnrollments => new StudentsImporter($year, $user, $options),
             ImportTemplateType::PhidiasStudents => new PhidiasStudentsImporter($year, $user, $options),
+            ImportTemplateType::PhidiasGrades => new PhidiasGradesImporter($year, $user, $options),
             ImportTemplateType::TeachingAssignments => new TeachingAssignmentsImporter($year, $user, $options),
             ImportTemplateType::Grades => new GradesImporter($year, $user, $options),
             ImportTemplateType::MapScores => new MapScoresImporter($year, $user, $options),
@@ -83,6 +85,7 @@ class ImportService
             $done['Aportes'] = Contribution::withTrashed()->where('import_batch_id', $batch->id)->forceDelete();
             $done['Estrategias'] = Strategy::withTrashed()->where('import_batch_id', $batch->id)->forceDelete();
             $done['Calificaciones'] = Grade::where('import_batch_id', $batch->id)->delete();
+            $done['Asignaturas de estudiantes'] = DB::table('student_subjects')->where('import_batch_id', $batch->id)->delete();
             $done['Calificaciones MAP'] = MapScore::where('import_batch_id', $batch->id)->delete();
             $done['Apoyos externos'] = ExternalSupport::withTrashed()->where('import_batch_id', $batch->id)->forceDelete();
 

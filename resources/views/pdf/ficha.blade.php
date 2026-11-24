@@ -295,11 +295,13 @@
                             <td>{{ $row['subject'] }}</td>
                             @for ($p = 1; $p <= 3; $p++)
                                 @php($lv = $row['levels'][$p] ?? null)
+                                @php($sc = $row['scores'][$p] ?? null)
+                                @php($band = $row['bands'][$p] ?? 'none')
                                 <td class="center">
-                                    @if ($lv === null)
+                                    @if ($lv === null && $sc === null)
                                         <span class="muted">—</span>
                                     @else
-                                        <div class="lvl-cell semi {{ $levelClass($lv) }}">{{ $lv }}</div>
+                                        <div class="lvl-cell semi {{ $sc !== null ? ['low' => 'lvl-crit', 'risk' => 'lvl-warn', 'adequate' => '', 'good' => 'lvl-good'][$band] ?? '' : $levelClass($lv) }}">{{ $sc ?? $lv }}</div>
                                         <div class="muted" style="font-size: 7pt;">{{ $row['indicators'][$p] ?? '' }}</div>
                                     @endif
                                 </td>

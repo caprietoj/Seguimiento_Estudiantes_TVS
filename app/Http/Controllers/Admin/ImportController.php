@@ -50,7 +50,7 @@ class ImportController extends Controller
             'templates' => collect(ImportService::SUPPORTED)->map(fn (ImportTemplateType $t) => [
                 'value' => $t->value,
                 'label' => $t->label(),
-                'has_template' => $t !== ImportTemplateType::PhidiasStudents,
+                'has_template' => ! in_array($t, [ImportTemplateType::PhidiasStudents, ImportTemplateType::PhidiasGrades], true),
             ])->values(),
             'maxMb' => (int) config('seguimiento.migracion.max_mb', 20),
             'batches' => $batches->map(fn (ImportBatch $b) => $this->batchSummary($b))->values(),
@@ -194,7 +194,7 @@ class ImportController extends Controller
     {
         $templateType = ImportTemplateType::tryFrom($type);
         abort_unless($templateType !== null && in_array($templateType, ImportService::SUPPORTED, true), 404);
-        abort_if($templateType === ImportTemplateType::PhidiasStudents, 404, 'Este archivo se exporta directamente desde Phidias.');
+        abort_if(in_array($templateType, [ImportTemplateType::PhidiasStudents, ImportTemplateType::PhidiasGrades], true), 404, 'Este archivo se exporta directamente desde Phidias.');
 
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();

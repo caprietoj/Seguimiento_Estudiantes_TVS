@@ -54,6 +54,8 @@ const DESCRIPTIONS: Record<string, string> = {
         'El Excel «Seguimiento y acuerdos» que usa hoy el colegio, tal cual: puede traer varias hojas (una por reunión). El grupo se toma del título y el periodo, seguimiento, fecha y director de la cabecera.',
     phidias_students:
         'El archivo «exported.xls» que descargas de Phidias, sin modificarlo. Toma solo código, nombre, curso, estado y foto; las demás columnas se ignoran.',
+    phidias_grades:
+        'El archivo «data.csv» de calificaciones que exportas de Phidias, sin modificarlo. Calcula la nota de cada asignatura y trimestre (promedio de sus criterios o indicadores, en la escala de la sección) con su desempeño, y asigna a cada estudiante solo las asignaturas que ve. Busca a los estudiantes por su código.',
     students_enrollments:
         'Una fila por estudiante: crea los que no existen y los matricula en su grupo del año escolar elegido (crea el grupo si hace falta).',
     teaching_assignments:

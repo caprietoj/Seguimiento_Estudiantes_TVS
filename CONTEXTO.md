@@ -223,6 +223,10 @@ Tipos (`ImportService::SUPPORTED`):
 - **Estudiantes y matrículas** (`StudentsImporter`) y **Asignaciones de profesores**
   (`TeachingAssignmentsImporter`, por correo del docente), con plantillas descargables.
 - **Calificaciones IB** (`GradesImporter`) y **MAP Growth** (`MapScoresImporter`).
+- **Calificaciones desde Phidias** (`PhidiasGradesImporter`, tipo `phidias_grades`): el
+  «data.csv» de Phidias tal cual. Nota por asignatura y trimestre = promedio de criterios o
+  indicadores en la escala de la sección, con su desempeño; llena `student_subjects` para que
+  la ficha muestre solo las asignaturas del estudiante. Estudiantes por código.
 - **Notas del Dpto. de Apoyo por estudiante** (`SupportNotesImporter`, plantilla
   `support_notes`): una fila por estudiante × área × seguimiento con los tres textos, las
   cuatro marcas (Sí/No) y profesional externo (crea un apoyo externo). No crea estudiantes

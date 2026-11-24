@@ -68,6 +68,9 @@ interface PerformanceRow {
     subject: string;
     levels: Record<number, number | null>;
     indicators: Record<number, string | null>;
+    /** Nota de Phidias en su escala («7,3/8»); null si es un nivel 1–7. */
+    scores?: Record<number, string | null>;
+    bands?: Record<number, string>;
     can_write: boolean;
 }
 
@@ -167,6 +170,22 @@ function lvlClass(level: number | null | undefined) {
     if (level === 4) return 'bg-muted text-foreground';
 
     return 'bg-good-soft text-good';
+}
+
+/** Color por desempeño (Phidias): bajo, básico, alto, superior. */
+function bandClass(band: string | undefined) {
+    switch (band) {
+        case 'low':
+            return 'bg-crit-soft text-crit';
+        case 'risk':
+            return 'bg-warn-soft text-warn';
+        case 'adequate':
+            return 'bg-muted text-foreground';
+        case 'good':
+            return 'bg-good-soft text-good';
+        default:
+            return 'bg-transparent text-muted-foreground';
+    }
 }
 
 function mapLevelClass(level: string | null | undefined) {
@@ -980,7 +999,17 @@ export default function FichaEstudiante(props: FichaProps) {
                                             <td className="py-1.5">{row.subject}</td>
                                             {[1, 2, 3].map((p) => (
                                                 <td key={p} className="py-1.5 text-center">
-                                                    {row.can_write ? (
+                                                    {row.scores?.[p] ? (
+                                                        // Nota oficial de Phidias: solo lectura.
+                                                        <span
+                                                            className={
+                                                                'inline-block min-w-12 rounded px-1.5 py-0.5 font-mono ' + bandClass(row.bands?.[p])
+                                                            }
+                                                            title="Promedio de los criterios/indicadores del trimestre en Phidias"
+                                                        >
+                                                            {row.scores[p]}
+                                                        </span>
+                                                    ) : row.can_write ? (
                                                         <select
                                                             defaultValue={row.levels[p] ?? ''}
                                                             className={'w-14 rounded px-1 py-0.5 text-center font-mono ' + lvlClass(row.levels[p])}

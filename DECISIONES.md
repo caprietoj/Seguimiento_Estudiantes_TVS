@@ -216,6 +216,27 @@ construir. Se actualiza en cada fase.
     `normalizeGroupCode` los trata como el mismo grupo (resuelve el problema conocido del
     código de Transición) y `resolveGroup` deduce su grado por el nombre del catálogo.
 
+## Calificaciones desde Phidias (24 nov 2026)
+
+33. **La nota de cada asignatura y trimestre es el promedio de sus criterios/indicadores en
+    la escala de Phidias**, no un nivel 1–7. Phidias exporta una fila por criterio o
+    indicador, sin nota final: Preescolar y Primaria 1–5, PAI criterios A–D de 1–8, DP 1–7.
+    Se guarda en `grades.score` (2 decimales), `scale_max` y `performance` (Bajo, Básico,
+    Alto, Superior). Los rangos de desempeño (`seguimiento.phidias_escalas`) se sacaron de
+    cómo Phidias rotula cada valor: coinciden en 32.391 de 32.400 filas de 2025-2026 (las 9
+    restantes son un 3 del PAI que Phidias rotula «Básico» solo a veces). `level` (1–7)
+    sigue para las notas que se registran a mano o con la plantilla IB.
+
+34. **Asignaturas por estudiante desde Phidias.** El importador llena `student_subjects`
+    con las asignaturas que cada estudiante tiene en el archivo, y la ficha muestra solo
+    esas (en el DP cada estudiante ve ~9 de ~20). Perfil IB, Reporte Cualitativo y Enfoque
+    de aprendizaje no son asignaturas y se omiten.
+
+35. **Estudiantes solo por código** (columna Code). El CSV de Phidias no usa comillas y el
+    nombre del indicador trae comas y saltos de línea: se leen las 13 primeras columnas
+    desde la izquierda y las 6 últimas desde la derecha (`PhidiasGradesImporter::loadSheets`).
+    Las alertas de la reunión usan el desempeño: Bajo y Básico son «a tener en cuenta».
+
 ## Pendiente de confirmar con el colegio (no bloquea el desarrollo)
 
 - Si además de las 6 asignaciones docentes de ejemplo (Historia, Matemáticas AA y

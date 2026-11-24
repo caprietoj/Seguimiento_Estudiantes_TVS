@@ -88,6 +88,38 @@ return [
     |--------------------------------------------------------------------------
     | Periodos que forman cada semestre: I = agosto a diciembre, II = enero a junio.
     */
+    /*
+    |--------------------------------------------------------------------------
+    | Escalas de calificación de Phidias
+    |--------------------------------------------------------------------------
+    | Tope de la escala por sección y rangos de desempeño para el promedio de los criterios o
+    | indicadores de cada asignatura en el trimestre. Se sacaron de cómo Phidias rotula cada
+    | valor en su exportación 2025-2026. Cada rango: [desempeño, operador, mínimo], en orden.
+    */
+    'phidias_escalas' => [
+        // Preescolar y Primaria: 2 Bajo, 3 Básico, 4 Alto, 5 Superior (3,5 y 4,5 son Alto).
+        5 => [
+            ['Desempeño Superior', '>', 4.5],
+            ['Desempeño Alto', '>=', 3.5],
+            ['Desempeño Básico', '>', 2.5],
+        ],
+        // DP (10.° y 11.°): 1,5–3 Bajo, 3,5–4 Básico, 5–6 Alto, 7 Superior.
+        7 => [
+            ['Desempeño Superior', '>=', 6.5],
+            ['Desempeño Alto', '>=', 4.5],
+            ['Desempeño Básico', '>=', 3.5],
+        ],
+        // PAI (5.° a 9.°), criterios A–D de 1 a 8: 1–3 Bajo, 4 Básico, 5–6 Alto, 7–8 Superior.
+        8 => [
+            ['Desempeño Superior', '>=', 6.5],
+            ['Desempeño Alto', '>=', 4.5],
+            ['Desempeño Básico', '>=', 3.5],
+        ],
+    ],
+
+    // Cursos de Bachillerato que en Phidias se califican en la escala del DP (1–7).
+    'phidias_cursos_dp' => ['decimo', 'undecimo'],
+
     'semestres' => [
         1 => [1],
         2 => [2, 3],

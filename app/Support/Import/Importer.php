@@ -51,7 +51,7 @@ abstract class Importer
         $report = new ImportReport;
 
         try {
-            $sheets = SheetData::load($path);
+            $sheets = $this->loadSheets($path);
         } catch (Throwable $e) {
             $report->error(null, null, 'No se pudo leer el archivo: '.$e->getMessage());
 
@@ -74,6 +74,17 @@ abstract class Importer
         }
 
         return $report;
+    }
+
+    /**
+     * Lee el archivo como hojas de texto. Un importador puede cambiarlo si el formato lo exige
+     * (p. ej. el CSV de calificaciones de Phidias, con comas sin comillas dentro de un campo).
+     *
+     * @return list<SheetData>
+     */
+    protected function loadSheets(string $path): array
+    {
+        return SheetData::load($path);
     }
 
     /** Deja en el registro de dónde vino (lote, archivo y fila), para auditoría y reversión. */
