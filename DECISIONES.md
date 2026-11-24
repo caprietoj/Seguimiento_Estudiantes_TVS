@@ -232,7 +232,11 @@ construir. Se actualiza en cada fase.
     esas (en el DP cada estudiante ve ~9 de ~20). Perfil IB, Reporte Cualitativo y Enfoque
     de aprendizaje no son asignaturas y se omiten.
 
-35. **Estudiantes solo por código** (columna Code). El CSV de Phidias no usa comillas y el
+35. **Estudiantes por código y, si falta, por nombre exacto** (columna Code). En producción
+    los estudiantes de 2025-2026 no tenían el código de Phidias (venían de otras
+    importaciones): si el código no está, se busca el nombre exacto (sin tildes, mayúsculas
+    ni orden; nunca por parecido) y, si es único y no tiene código, se le guarda el de
+    Phidias (se deshace al revertir). Si ya tiene otro código, no se importa y se avisa. El CSV de Phidias no usa comillas y el
     nombre del indicador trae comas y saltos de línea: se leen las 13 primeras columnas
     desde la izquierda y las 6 últimas desde la derecha (`PhidiasGradesImporter::loadSheets`).
     Las alertas de la reunión usan el desempeño: Bajo y Básico son «a tener en cuenta».

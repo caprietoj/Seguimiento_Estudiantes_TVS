@@ -20,8 +20,8 @@ use Illuminate\Support\Facades\DB;
  *  - la asignatura queda en `student_subjects` del año: la ficha muestra solo las asignaturas
  *    que el estudiante ve (en el DP cada estudiante elige ~9 de ~20).
  *
- * El estudiante se busca solo por su código institucional (columna Code). No se empareja por
- * nombre. Las áreas que no son asignaturas (Perfil IB, Reporte Cualitativo, Enfoque de
+ * El estudiante se busca por su código institucional (columna Code); si el código no está en
+ * la herramienta, por su nombre exacto (nunca por parecido), y se le guarda el código. Las áreas que no son asignaturas (Perfil IB, Reporte Cualitativo, Enfoque de
  * aprendizaje) se omiten. Reimportar actualiza las notas y no duplica nada.
  */
 class PhidiasGradesImporter extends Importer
@@ -186,11 +186,53 @@ class PhidiasGradesImporter extends Importer
             $report->warning(null, null, 'No son asignaturas y no se importan: '.implode(', ', array_keys($skippedAreas)).'.');
         }
 
-        // 2) Estudiantes por código (sin emparejar por nombre: datos sensibles).
-        $students = Student::whereIn('institutional_code', array_keys($names))->get()->keyBy('institutional_code');
+        // 2) Estudiantes por código; si el código no está en la herramienta, por nombre EXACTO
+        //    (sin tildes, mayúsculas ni importar el orden; nunca por parecido). Al que se encuentra
+        //    por nombre y no tiene código se le guarda el de Phidias (se deshace al revertir).
+        $codes = array_map('strval', array_keys($names));
+        $students = Student::whereIn('institutional_code', $codes)->get()->keyBy(fn (Student $s) => (string) $s->institutional_code);
         $enrolled = Enrollment::where('school_year_id', $this->schoolYear->id)->pluck('group_id', 'student_id');
-        foreach (array_diff(array_keys($names), $students->keys()->map(fn ($c) => (string) $c)->all()) as $code) {
-            $report->error(null, null, "No hay ningún estudiante con el código {$code} ({$names[$code]}): sus calificaciones no se importan. Impórtalo primero desde Phidias.");
+        $missing = array_values(array_diff($codes, $students->keys()->all()));
+
+        if ($missing !== []) {
+            $byName = [];
+            foreach (Student::all(['id', 'full_name', 'institutional_code']) as $s) {
+                $byName[NameMatcher::key($s->full_name)][] = $s;
+            }
+
+            foreach ($missing as $code) {
+                $name = $names[$code];
+                $candidates = collect($byName[NameMatcher::key($name)] ?? []);
+                // Si hay homónimos, el matriculado ese año.
+                if ($candidates->count() > 1) {
+                    $candidates = $candidates->filter(fn (Student $s) => $enrolled->has($s->id))->values();
+                }
+
+                if ($candidates->count() !== 1) {
+                    $report->error(null, null, $candidates->isEmpty()
+                        ? "No hay ningún estudiante con el código {$code} ni con el nombre exacto «{$name}»: sus calificaciones no se importan. Impórtalo primero desde Phidias."
+                        : "Hay varios estudiantes llamados «{$name}» y ninguno tiene el código {$code}: sus calificaciones no se importan.");
+
+                    continue;
+                }
+
+                /** @var Student $student */
+                $student = $candidates->first();
+                if ($student->institutional_code !== null && $student->institutional_code !== '') {
+                    $report->error(null, null, "«{$student->full_name}» está en la herramienta con el código {$student->institutional_code}, pero Phidias le da el {$code}: sus calificaciones no se importan. Revisa cuál es el correcto.");
+
+                    continue;
+                }
+
+                $student->forceFill(['institutional_code' => $code])->save();
+                $report->remember(['type' => 'student_code_set', 'id' => $student->id]);
+                $report->count('Códigos de Phidias guardados en estudiantes');
+                $students->put($code, $student);
+            }
+
+            if ($report->created['Códigos de Phidias guardados en estudiantes'] ?? 0) {
+                $report->warning(null, null, $report->created['Códigos de Phidias guardados en estudiantes'].' estudiante(s) no tenían el código de Phidias: se encontraron por su nombre exacto y se les guardó el código.');
+            }
         }
         foreach ($students as $student) {
             if (! $enrolled->has($student->id)) {
