@@ -232,14 +232,17 @@ construir. Se actualiza en cada fase.
     esas (en el DP cada estudiante ve ~9 de ~20). Perfil IB, Reporte Cualitativo y Enfoque
     de aprendizaje no son asignaturas y se omiten.
 
-35. **Estudiantes por código y, si falta, por nombre exacto** (columna Code). En producción
-    los estudiantes de 2025-2026 no tenían el código de Phidias (venían de otras
-    importaciones): si el código no está, se busca el nombre exacto (sin tildes, mayúsculas
-    ni orden; nunca por parecido) y, si es único y no tiene código, se le guarda el de
-    Phidias (se deshace al revertir). Si ya tiene otro código, no se importa y se avisa. El CSV de Phidias no usa comillas y el
-    nombre del indicador trae comas y saltos de línea: se leen las 13 primeras columnas
-    desde la izquierda y las 6 últimas desde la derecha (`PhidiasGradesImporter::loadSheets`).
-    Las alertas de la reunión usan el desempeño: Bajo y Básico son «a tener en cuenta».
+35. **Dos códigos distintos: institucional y de Phidias.** En producción el código
+    institucional es el documento de identidad (1019905979); el «Code» de las exportaciones de
+    calificaciones de Phidias es su código interno (2012353). Se guarda aparte en
+    `students.phidias_code` y no se tocan entre sí. El importador busca por `phidias_code`,
+    luego por código institucional igual y, si no, por nombre exacto (sin tildes, mayúsculas
+    ni orden; nunca por parecido); al encontrado le guarda el `phidias_code` (revertir lo
+    deshace). Si ya tiene otro código de Phidias, no se importa. Los que no existen se crean
+    en su grupo solo si se marca «Crear los estudiantes que no existan» (revertir los borra).
+    El CSV de Phidias no usa comillas: se leen las 13 primeras columnas desde la izquierda y
+    las 6 últimas desde la derecha (`PhidiasGradesImporter::loadSheets`). Las alertas de la
+    reunión usan el desempeño: Bajo y Básico son «a tener en cuenta».
 
 ## Pendiente de confirmar con el colegio (no bloquea el desarrollo)
 

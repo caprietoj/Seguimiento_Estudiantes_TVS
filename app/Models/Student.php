@@ -18,6 +18,7 @@ class Student extends Model
 
     protected $fillable = [
         'institutional_code',
+        'phidias_code',
         'full_name',
         'photo_path',
         'active',

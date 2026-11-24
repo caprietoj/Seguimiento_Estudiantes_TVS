@@ -338,6 +338,7 @@ export default function AdminImportar({ schoolYears, activeYearId, templates, ma
     const [fileInputKey, setFileInputKey] = useState(0);
     const isCurrent = form.data.template_type === 'current_format';
     const isSupportNotes = form.data.template_type === 'support_notes';
+    const isPhidiasGrades = form.data.template_type === 'phidias_grades';
     const isPhidias = form.data.template_type === 'phidias_students';
     const year = schoolYears.find((y) => String(y.id) === String(form.data.school_year_id));
 
@@ -385,7 +386,11 @@ export default function AdminImportar({ schoolYears, activeYearId, templates, ma
                                 checked={form.data.template_type === t.value}
                                 onChange={() =>
                                     // En el seguimiento del Dpto. de Apoyo no se crean estudiantes salvo que se pida.
-                                    form.setData((d) => ({ ...d, template_type: t.value, create_students: t.value !== 'support_notes' }))
+                                    form.setData((d) => ({
+                                        ...d,
+                                        template_type: t.value,
+                                        create_students: !['support_notes', 'phidias_grades'].includes(t.value),
+                                    }))
                                 }
                             />
                             <span className="text-sm font-semibold">{t.label}</span>
@@ -448,7 +453,7 @@ export default function AdminImportar({ schoolYears, activeYearId, templates, ma
                     </Button>
                 </div>
 
-                {(isCurrent || isSupportNotes) && (
+                {(isCurrent || isSupportNotes || isPhidiasGrades) && (
                     <label className="mt-3 flex items-center gap-2 text-sm">
                         <input
                             type="checkbox"

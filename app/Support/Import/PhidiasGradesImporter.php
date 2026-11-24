@@ -20,12 +20,15 @@ use Illuminate\Support\Facades\DB;
  *  - la asignatura queda en `student_subjects` del año: la ficha muestra solo las asignaturas
  *    que el estudiante ve (en el DP cada estudiante elige ~9 de ~20).
  *
- * El estudiante se busca por su código institucional (columna Code); si el código no está en
- * la herramienta, por su nombre exacto (nunca por parecido), y se le guarda el código. Las áreas que no son asignaturas (Perfil IB, Reporte Cualitativo, Enfoque de
+ * El estudiante se busca por su código interno de Phidias (`students.phidias_code`, columna
+ * Code); si no lo tiene, por su nombre exacto (nunca por parecido) y se le guarda el código.
+ * Opcionalmente se crean los que no existen. Las áreas que no son asignaturas (Perfil IB, Reporte Cualitativo, Enfoque de
  * aprendizaje) se omiten. Reimportar actualiza las notas y no duplica nada.
  */
 class PhidiasGradesImporter extends Importer
 {
+    use ResolvesRecords;
+
     /** Encabezados del CSV de Phidias. */
     public const HEADERS = [
         'Year', 'Code', 'Lastname', 'Firstname', 'Gender', 'Category', 'Course', 'Section', 'Period',
@@ -125,6 +128,7 @@ class PhidiasGradesImporter extends Importer
         // 1) Agrupar: código × asignatura × trimestre → valores.
         $groups = [];
         $names = [];
+        $sections = [];
         $yearsInFile = [];
         $skippedAreas = [];
 
@@ -169,6 +173,7 @@ class PhidiasGradesImporter extends Importer
                 $groups[$key]['values'][] = (float) $get('value');
             }
             $names[$code] = trim($get('firstname').' '.$get('lastname'));
+            $sections[$code] = $get('section');
         }
 
         $report->rowsRead = count($groups);
@@ -186,17 +191,23 @@ class PhidiasGradesImporter extends Importer
             $report->warning(null, null, 'No son asignaturas y no se importan: '.implode(', ', array_keys($skippedAreas)).'.');
         }
 
-        // 2) Estudiantes por código; si el código no está en la herramienta, por nombre EXACTO
-        //    (sin tildes, mayúsculas ni importar el orden; nunca por parecido). Al que se encuentra
-        //    por nombre y no tiene código se le guarda el de Phidias (se deshace al revertir).
+        // 2) Estudiantes. El «Code» de Phidias es su código interno (2012353), distinto del código
+        //    institucional de la herramienta (el documento de identidad): se guarda aparte en
+        //    `phidias_code`. Orden: phidias_code → código institucional igual → nombre EXACTO (sin
+        //    tildes, mayúsculas ni orden; nunca por parecido), y al encontrado se le guarda el
+        //    phidias_code (revertir lo deshace). Si no existe, se crea solo si se pidió.
         $codes = array_map('strval', array_keys($names));
-        $students = Student::whereIn('institutional_code', $codes)->get()->keyBy(fn (Student $s) => (string) $s->institutional_code);
+        $students = Student::whereIn('phidias_code', $codes)->get()->keyBy(fn (Student $s) => (string) $s->phidias_code);
+        foreach (Student::whereIn('institutional_code', array_diff($codes, $students->keys()->all()))->get() as $s) {
+            $students->put((string) $s->institutional_code, $s);
+        }
         $enrolled = Enrollment::where('school_year_id', $this->schoolYear->id)->pluck('group_id', 'student_id');
         $missing = array_values(array_diff($codes, $students->keys()->all()));
+        $create = (bool) ($this->options['create_students'] ?? false);
 
         if ($missing !== []) {
             $byName = [];
-            foreach (Student::all(['id', 'full_name', 'institutional_code']) as $s) {
+            foreach (Student::all(['id', 'full_name', 'institutional_code', 'phidias_code']) as $s) {
                 $byName[NameMatcher::key($s->full_name)][] = $s;
             }
 
@@ -208,32 +219,41 @@ class PhidiasGradesImporter extends Importer
                     $candidates = $candidates->filter(fn (Student $s) => $enrolled->has($s->id))->values();
                 }
 
-                if ($candidates->count() !== 1) {
-                    $report->error(null, null, $candidates->isEmpty()
-                        ? "No hay ningún estudiante con el código {$code} ni con el nombre exacto «{$name}»: sus calificaciones no se importan. Impórtalo primero desde Phidias."
-                        : "Hay varios estudiantes llamados «{$name}» y ninguno tiene el código {$code}: sus calificaciones no se importan.");
+                if ($candidates->count() > 1) {
+                    $report->error(null, null, "Hay varios estudiantes llamados «{$name}» y ninguno tiene el código de Phidias {$code}: sus calificaciones no se importan.");
+
+                    continue;
+                }
+
+                if ($candidates->isEmpty()) {
+                    $created = $create ? $this->createStudent($code, $name, $sections[$code] ?? '', $report) : null;
+                    if ($created === null) {
+                        if (! $create) {
+                            $report->error(null, null, "«{$name}» (código de Phidias {$code}, {$sections[$code]}) no está en la herramienta: sus calificaciones no se importan. Marca «Crear los estudiantes que no existan» para crearlo.");
+                        }
+
+                        continue;
+                    }
+                    $students->put($code, $created);
 
                     continue;
                 }
 
                 /** @var Student $student */
                 $student = $candidates->first();
-                if ($student->institutional_code !== null && $student->institutional_code !== '') {
-                    $report->error(null, null, "«{$student->full_name}» está en la herramienta con el código {$student->institutional_code}, pero Phidias le da el {$code}: sus calificaciones no se importan. Revisa cuál es el correcto.");
+                if ($student->phidias_code !== null && $student->phidias_code !== '' && $student->phidias_code !== $code) {
+                    $report->error(null, null, "«{$student->full_name}» ya tiene el código de Phidias {$student->phidias_code}, pero este archivo le da el {$code}: sus calificaciones no se importan. Revisa cuál es el correcto.");
 
                     continue;
                 }
 
-                $student->forceFill(['institutional_code' => $code])->save();
-                $report->remember(['type' => 'student_code_set', 'id' => $student->id]);
-                $report->count('Códigos de Phidias guardados en estudiantes');
+                $student->forceFill(['phidias_code' => $code])->save();
+                $report->remember(['type' => 'student_phidias_code_set', 'id' => $student->id]);
+                $report->count('Estudiantes enlazados con su código de Phidias');
                 $students->put($code, $student);
             }
-
-            if ($report->created['Códigos de Phidias guardados en estudiantes'] ?? 0) {
-                $report->warning(null, null, $report->created['Códigos de Phidias guardados en estudiantes'].' estudiante(s) no tenían el código de Phidias: se encontraron por su nombre exacto y se les guardó el código.');
-            }
         }
+
         foreach ($students as $student) {
             if (! $enrolled->has($student->id)) {
                 $report->warning(null, null, "{$student->full_name} ({$student->institutional_code}) no tiene matrícula en {$this->schoolYear->name}; sus notas se importan igual.");
@@ -319,6 +339,23 @@ class PhidiasGradesImporter extends Importer
                 'criterios' => count($g['values']),
             ]);
         }
+    }
+
+    /** Crea al estudiante que no existe (nombre y grupo de Phidias) y lo matricula en su grupo del año. */
+    private function createStudent(string $code, string $name, string $section, ImportReport $report): ?Student
+    {
+        $group = $this->resolveGroup($section, null, false, $report, 'data', 0);
+        if ($group === null) {
+            return null;
+        }
+
+        $student = new Student(['full_name' => $this->cleanName($name), 'active' => true]);
+        $student->phidias_code = $code;
+        $this->stamp($student, 0);
+        $student->save();
+        $report->count('Estudiantes nuevos');
+
+        return $this->ensureEnrollment($student, $group, false, $report, 'data', 0) ? $student : null;
     }
 
     /** Nombre de asignatura legible: «MATEMÁTICAS» → «Matemáticas»; respeta los que ya traen mayúsculas y minúsculas. */

@@ -97,6 +97,7 @@ class ImportService
                     'enrollment_moved' => Enrollment::whereKey($change['id'])->update(['group_id' => $change['previous'] ?? null]),
                     'student_active' => Student::withTrashed()->whereKey($change['id'])->update(['active' => (bool) ($change['previous'] ?? 1)]),
                     'student_code_set' => Student::withTrashed()->whereKey($change['id'])->update(['institutional_code' => null]),
+                    'student_phidias_code_set' => Student::withTrashed()->whereKey($change['id'])->update(['phidias_code' => null]),
                     default => null,
                 };
 
@@ -104,6 +105,7 @@ class ImportService
                     'enrollment_moved' => 'Cambios de grupo',
                     'student_active' => 'Cambios de estado',
                     'student_code_set' => 'Códigos institucionales',
+                    'student_phidias_code_set' => 'Códigos de Phidias',
                     default => null,
                 };
 
